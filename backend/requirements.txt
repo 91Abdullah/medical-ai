@@ -5,7 +5,7 @@ tensorflow
 pydicom
 Pillow
 numpy
-opencv-python
+opencv-python-headless
 scikit-learn
 SQLAlchemy
 Flask-SQLAlchemy
