@@ -17,19 +17,17 @@ RUN apt-get update && apt-get install -y \
 # COPY backend/requirements.txt ./requirements.txt
 COPY requirements.txt .
 
-# (2) Print what’s actually inside the image (proves which file pip reads)
-RUN pwd && ls -la && \
-    echo "=== requirements.txt ===" && nl -ba requirements.txt && echo "=======================" && \
-    echo "=== pip env/config ===" && env | sort | grep -i '^PIP\|^PYTHON' || true && \
-    python -m pip config debug || true
+# upgrade pip first (separate layer)
+RUN python -m pip install --upgrade pip
 
-# (3) Hard-disable any hash enforcement & stray pip.conf
-ENV PIP_REQUIRE_HASHES=0 PIP_DISABLE_PIP_VERSION_CHECK=1
+# make absolutely sure hash checking is OFF
+RUN python -m pip config set global.require-hashes false
+
+# (optional defense) clear any config files that might sneak in
 RUN rm -f /etc/pip.conf /root/.pip/pip.conf /root/.config/pip/pip.conf || true
 
-# (4) Install
-RUN python -m pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# now install
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash appuser
