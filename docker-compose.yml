@@ -6,10 +6,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://backend:5000
     ports:
       - "3000:3000"
-    args:
-      NEXT_PUBLIC_API_BASE_URL: http://backend:5000
     environment:
       # - NEXT_PUBLIC_API_URL=http://backend:5000
       - NEXT_PUBLIC_APP_NAME=Medical AI Diagnostics
