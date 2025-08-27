@@ -17,8 +17,8 @@ COPY . .
 # ensure public exists even if your app doesn't have one
 RUN mkdir -p public
 
-ARG NEXT_PUBLIC_API_BASE_URL=http://backend:8000
-ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ARG NEXT_PUBLIC_API_URL=http://backend:5000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # disable telemetry in CI
 ENV NEXT_TELEMETRY_DISABLED=1

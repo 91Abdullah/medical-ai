@@ -122,7 +122,7 @@ class ApiClient {
         reject(new Error('Network error'))
       })
 
-      xhr.open('POST', `${this.baseUrl}${endpoint}`)
+      xhr.open('POST', `${endpoint}`)
       xhr.send(formData)
     })
   }
@@ -203,7 +203,7 @@ class ApiClient {
         reject(new Error('Network error'))
       })
 
-      xhr.open('POST', `${this.baseUrl}/api/biomarkers/batch`)
+      xhr.open('POST', `/api/biomarkers/batch`)
       xhr.send(formData)
     })
   }
@@ -215,7 +215,7 @@ class ApiClient {
 
   // Health check
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    const response = await fetch(`${this.baseUrl}/api/health`)
+    const response = await fetch(`/api/health`)
     return this.handleResponse(response)
   }
 }
