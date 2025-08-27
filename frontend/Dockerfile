@@ -14,6 +14,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# ensure public exists even if your app doesn't have one
+RUN mkdir -p public
+
 ARG NEXT_PUBLIC_API_BASE_URL=http://backend:8000
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
@@ -26,9 +29,6 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-
-# ensure public exists even if your app doesn't have one
-RUN mkdir -p public
 
 # Non-root user
 RUN addgroup --system --gid 1001 nodejs \
