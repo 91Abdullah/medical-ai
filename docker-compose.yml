@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Frontend service (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NEXT_PUBLIC_APP_NAME=Medical AI Diagnostics
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - medical-ai-network
+
+  # Backend service (Python Flask)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=your-production-secret-key-here
+      - DATABASE_URL=sqlite:///medical_ai.db
+      - CORS_ORIGINS=http://localhost:3000
+      - LOG_LEVEL=INFO
+      - MAX_CONTENT_LENGTH=16777216
+      - MODELS_DIR=/app/models
+      - UPLOAD_FOLDER=/app/uploads
+    volumes:
+      - ./backend/models:/app/models:ro  # Mount models as read-only
+      - backend_uploads:/app/uploads      # Persistent storage for uploads
+      - backend_logs:/app/logs           # Persistent storage for logs
+      - backend_db:/app/database         # Persistent storage for database
+    restart: unless-stopped
+    networks:
+      - medical-ai-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Redis for caching (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - medical-ai-network
+
+  # Optional: PostgreSQL for production database (uncomment if needed)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     - POSTGRES_DB=medical_ai
+  #     - POSTGRES_USER=medical_user
+  #     - POSTGRES_PASSWORD=secure_password_here
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+  #   networks:
+  #     - medical-ai-network
+
+volumes:
+  backend_uploads:
+    driver: local
+  backend_logs:
+    driver: local
+  backend_db:
+    driver: local
+  # redis_data:
+  #   driver: local
+  # postgres_data:
+  #   driver: local
+
+networks:
+  medical-ai-network:
+    driver: bridge
