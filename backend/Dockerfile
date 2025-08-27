@@ -12,11 +12,24 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# (1) Copy the exact file you expect (make path explicit if needed)
+# If compose build.context is ./backend this is fine; otherwise use:
+# COPY backend/requirements.txt ./requirements.txt
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# (2) Print what’s actually inside the image (proves which file pip reads)
+RUN pwd && ls -la && \
+    echo "=== requirements.txt ===" && nl -ba requirements.txt && echo "=======================" && \
+    echo "=== pip env/config ===" && env | sort | grep -i '^PIP\|^PYTHON' || true && \
+    python -m pip config debug || true
+
+# (3) Hard-disable any hash enforcement & stray pip.conf
+ENV PIP_REQUIRE_HASHES=0 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN rm -f /etc/pip.conf /root/.pip/pip.conf /root/.config/pip/pip.conf || true
+
+# (4) Install
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash appuser

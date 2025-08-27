@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 
 services:
   # Frontend service (Next.js)
@@ -9,7 +9,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NEXT_PUBLIC_API_URL=http://backend:5000
       - NEXT_PUBLIC_APP_NAME=Medical AI Diagnostics
       - NODE_ENV=production
     depends_on:

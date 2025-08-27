@@ -1,0 +1,10 @@
+__pycache__/
+.pytest_cache/
+.venv/
+uploads/
+logs/
+models/        # you’re mounting it at runtime anyway
+*.pt
+*.pth
+*.keras
+*.h5
