@@ -5,18 +5,28 @@ import { Calendar, User, Building, FileText, Image, Ruler, Database } from 'luci
 
 interface MetadataCardProps {
   metadata: {
-    patient_id: string
-    patient_name: string
-    study_date: string
-    modality: string
-    institution_name: string
-    study_description: string
-    series_description: string
-    image_type: string
-    rows: number
-    columns: number
-    pixel_spacing: string[]
-    file_size: number
+    patient_id?: string | null
+    patient_name?: string | null
+    patient_sex?: string | null
+    patient_age?: string | null
+    patient_birth_date?: string | null
+    study_date?: string | null
+    study_time?: string | null
+    modality?: string | null
+    institution_name?: string | null
+    manufacturer?: string | null
+    manufacturer_model_name?: string | null
+    study_description?: string | null
+    series_description?: string | null
+    image_type?: string | null
+    rows?: number | null
+    columns?: number | null
+    pixel_spacing?: number[] | null
+    slice_thickness?: number | null
+    bits_allocated?: number | null
+    bits_stored?: number | null
+    file_size?: number | null
+    file_name?: string | null
   }
   className?: string
 }
@@ -42,63 +52,120 @@ export function MetadataCard({ metadata, className = '' }: MetadataCardProps) {
     }
   }
 
+  // Helper function to check if a value is not empty
+  const hasValue = (value: any): boolean => {
+    return value !== null && value !== undefined && value !== ''
+  }
+
   const metadataItems = [
     {
       icon: <User className="h-4 w-4" />,
       label: 'Patient ID',
-      value: metadata.patient_id || 'N/A'
+      value: hasValue(metadata.patient_id) ? metadata.patient_id : 'N/A'
     },
     {
       icon: <User className="h-4 w-4" />,
       label: 'Patient Name',
-      value: metadata.patient_name || 'N/A'
+      value: hasValue(metadata.patient_name) ? metadata.patient_name : 'N/A'
+    },
+    {
+      icon: <User className="h-4 w-4" />,
+      label: 'Patient Sex',
+      value: hasValue(metadata.patient_sex) ? metadata.patient_sex : 'N/A'
+    },
+    {
+      icon: <User className="h-4 w-4" />,
+      label: 'Patient Age',
+      value: hasValue(metadata.patient_age) ? metadata.patient_age : 'N/A'
+    },
+    {
+      icon: <Calendar className="h-4 w-4" />,
+      label: 'Birth Date',
+      value: hasValue(metadata.patient_birth_date) ? metadata.patient_birth_date : 'N/A'
     },
     {
       icon: <Calendar className="h-4 w-4" />,
       label: 'Study Date',
-      value: metadata.study_date ? formatDate(metadata.study_date) : 'N/A'
+      value: hasValue(metadata.study_date) ? formatDate(metadata.study_date!) : 'N/A'
+    },
+    {
+      icon: <Calendar className="h-4 w-4" />,
+      label: 'Study Time',
+      value: hasValue(metadata.study_time) ? metadata.study_time : 'N/A'
     },
     {
       icon: <Building className="h-4 w-4" />,
       label: 'Institution',
-      value: metadata.institution_name || 'N/A'
+      value: hasValue(metadata.institution_name) ? metadata.institution_name : 'N/A'
+    },
+    {
+      icon: <Building className="h-4 w-4" />,
+      label: 'Manufacturer',
+      value: hasValue(metadata.manufacturer) ? metadata.manufacturer : 'N/A'
+    },
+    {
+      icon: <Building className="h-4 w-4" />,
+      label: 'Model Name',
+      value: hasValue(metadata.manufacturer_model_name) ? metadata.manufacturer_model_name : 'N/A'
     },
     {
       icon: <FileText className="h-4 w-4" />,
       label: 'Modality',
-      value: metadata.modality || 'N/A'
+      value: hasValue(metadata.modality) ? metadata.modality : 'N/A'
     },
     {
       icon: <FileText className="h-4 w-4" />,
       label: 'Study Description',
-      value: metadata.study_description || 'N/A'
+      value: hasValue(metadata.study_description) ? metadata.study_description : 'N/A'
     },
     {
       icon: <FileText className="h-4 w-4" />,
       label: 'Series Description',
-      value: metadata.series_description || 'N/A'
+      value: hasValue(metadata.series_description) ? metadata.series_description : 'N/A'
     },
     {
       icon: <Image className="h-4 w-4" />,
       label: 'Image Type',
-      value: metadata.image_type || 'N/A'
+      value: hasValue(metadata.image_type) ? metadata.image_type : 'N/A'
     },
     {
       icon: <Ruler className="h-4 w-4" />,
       label: 'Dimensions',
-      value: `${metadata.rows || 0} × ${metadata.columns || 0}`
+      value: (metadata.rows && metadata.columns) 
+        ? `${metadata.rows} × ${metadata.columns}` 
+        : 'N/A'
     },
     {
       icon: <Ruler className="h-4 w-4" />,
       label: 'Pixel Spacing',
-      value: metadata.pixel_spacing && metadata.pixel_spacing.length > 0 
-        ? metadata.pixel_spacing.join(' × ') + ' mm'
+      value: (metadata.pixel_spacing && metadata.pixel_spacing.length > 0) 
+        ? metadata.pixel_spacing.map(x => x.toFixed(3)).join(' × ') + ' mm'
         : 'N/A'
+    },
+    {
+      icon: <Ruler className="h-4 w-4" />,
+      label: 'Slice Thickness',
+      value: (metadata.slice_thickness !== null && metadata.slice_thickness !== undefined) ? `${metadata.slice_thickness} mm` : 'N/A'
+    },
+    {
+      icon: <Database className="h-4 w-4" />,
+      label: 'Bits Allocated',
+      value: (metadata.bits_allocated !== null && metadata.bits_allocated !== undefined) ? `${metadata.bits_allocated} bits` : 'N/A'
+    },
+    {
+      icon: <Database className="h-4 w-4" />,
+      label: 'Bits Stored',
+      value: (metadata.bits_stored !== null && metadata.bits_stored !== undefined) ? `${metadata.bits_stored} bits` : 'N/A'
     },
     {
       icon: <Database className="h-4 w-4" />,
       label: 'File Size',
       value: formatFileSize(metadata.file_size || 0)
+    },
+    {
+      icon: <FileText className="h-4 w-4" />,
+      label: 'File Name',
+      value: hasValue(metadata.file_name) ? metadata.file_name : 'N/A'
     }
   ]
 

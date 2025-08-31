@@ -61,7 +61,13 @@ export default function BiomarkersPage() {
     setError(null)
     
     // Extract DICOM metadata if it's a DICOM file
-    if (file.type === 'application/dicom') {
+    const isDicom = file.name.toLowerCase().endsWith('.dcm') || 
+                   file.name.toLowerCase().endsWith('.dicom') ||
+                   file.type === 'application/dicom' ||
+                   file.type === 'application/x-dicom' ||
+                   file.type === 'application/dicom+json'
+    
+    if (isDicom) {
       extractMetadata(file)
     }
   }
@@ -333,7 +339,7 @@ export default function BiomarkersPage() {
           )}
 
           {metadata && (
-            <MetadataCard metadata={metadata} />
+            <MetadataCard metadata={metadata.metadata} />
           )}
 
           {predictions.length === 0 && !metadata && (

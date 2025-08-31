@@ -21,6 +21,11 @@ export function generatePDFReport(data: ReportData): void {
   const margin = 20
   let yPosition = margin
 
+  // Helper function to check if a value is not null, undefined, or empty string
+  const hasValue = (value: any): boolean => {
+    return value !== null && value !== undefined && value !== ''
+  }
+
   // Header
   pdf.setFontSize(20)
   pdf.setFont('helvetica', 'bold')
@@ -125,15 +130,47 @@ export function generatePDFReport(data: ReportData): void {
     yPosition += 10
 
     pdf.setFont('helvetica', 'normal')
+    
+    // Handle both full response format and inner metadata format
+    const metadata = 'metadata' in data.metadata ? data.metadata.metadata : data.metadata
+    
     const metadataFields = [
-      { label: 'Patient ID', value: data.metadata.patient_id },
-      { label: 'Patient Name', value: data.metadata.patient_name },
-      { label: 'Study Date', value: data.metadata.study_date },
-      { label: 'Modality', value: data.metadata.modality },
-      { label: 'Institution', value: data.metadata.institution_name },
-      { label: 'Study Description', value: data.metadata.study_description },
-      { label: 'Image Dimensions', value: `${data.metadata.rows} x ${data.metadata.columns}` },
-      { label: 'File Size', value: `${(data.metadata.file_size / 1024 / 1024).toFixed(2)} MB` }
+      { label: 'Patient ID', value: hasValue(metadata.patient_id) ? metadata.patient_id : 'N/A' },
+      { label: 'Patient Name', value: hasValue(metadata.patient_name) ? metadata.patient_name : 'N/A' },
+      { label: 'Patient Sex', value: hasValue(metadata.patient_sex) ? metadata.patient_sex : 'N/A' },
+      { label: 'Patient Age', value: hasValue(metadata.patient_age) ? metadata.patient_age : 'N/A' },
+      { label: 'Study Date', value: hasValue(metadata.study_date) ? metadata.study_date : 'N/A' },
+      { label: 'Study Time', value: hasValue(metadata.study_time) ? metadata.study_time : 'N/A' },
+      { label: 'Modality', value: hasValue(metadata.modality) ? metadata.modality : 'N/A' },
+      { label: 'Institution', value: hasValue(metadata.institution_name) ? metadata.institution_name : 'N/A' },
+      { label: 'Manufacturer', value: hasValue(metadata.manufacturer) ? metadata.manufacturer : 'N/A' },
+      { label: 'Study Description', value: hasValue(metadata.study_description) ? metadata.study_description : 'N/A' },
+      { label: 'Series Description', value: hasValue(metadata.series_description) ? metadata.series_description : 'N/A' },
+      { label: 'Image Type', value: hasValue(metadata.image_type) ? metadata.image_type : 'N/A' },
+      { 
+        label: 'Image Dimensions', 
+        value: (metadata.rows && metadata.columns) 
+          ? `${metadata.rows} × ${metadata.columns}` 
+          : 'N/A' 
+      },
+      { 
+        label: 'File Size', 
+        value: metadata.file_size 
+          ? `${(metadata.file_size / 1024 / 1024).toFixed(2)} MB` 
+          : 'N/A' 
+      },
+      { 
+        label: 'Pixel Spacing', 
+        value: (metadata.pixel_spacing && metadata.pixel_spacing.length > 0)
+          ? metadata.pixel_spacing.join(' × ')
+          : 'N/A'
+      },
+      { 
+        label: 'Bits Allocated', 
+        value: metadata.bits_allocated 
+          ? `${metadata.bits_allocated} bits` 
+          : 'N/A' 
+      }
     ]
 
     metadataFields.forEach(field => {
@@ -158,10 +195,27 @@ export function generatePDFReport(data: ReportData): void {
     yPosition += 15
 
     try {
+      // Handle data URL format (remove prefix if present)
+      let imageData = data.image
+      let imageFormat = 'JPEG'
+      
+      if (data.image.startsWith('data:image/')) {
+        const parts = data.image.split(',')
+        if (parts.length === 2) {
+          imageData = parts[1] // Get the base64 data without the prefix
+          // Determine format from data URL
+          if (data.image.includes('data:image/png')) {
+            imageFormat = 'PNG'
+          } else if (data.image.includes('data:image/jpeg') || data.image.includes('data:image/jpg')) {
+            imageFormat = 'JPEG'
+          }
+        }
+      }
+      
       // Add image to PDF (scaled to fit)
       const imgWidth = 120
       const imgHeight = 90
-      pdf.addImage(data.image, 'JPEG', margin, yPosition, imgWidth, imgHeight)
+      pdf.addImage(imageData, imageFormat, margin, yPosition, imgWidth, imgHeight)
       yPosition += imgHeight + 10
     } catch (error) {
       console.error('Error adding image to PDF:', error)
@@ -208,6 +262,14 @@ export function generatePDFReport(data: ReportData): void {
 
 export function imageToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
+    // Check if it's a DICOM file
+    if (file.name.toLowerCase().endsWith('.dcm') || file.name.toLowerCase().endsWith('.dicom')) {
+      // For DICOM files, we'll create a placeholder or try to convert
+      // Since DICOM conversion is complex, we'll reject for now and handle it in the UI
+      reject(new Error('DICOM files need special processing. Please use regular image formats (JPG, PNG) for PDF export.'))
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = () => {
       if (reader.result && typeof reader.result === 'string') {

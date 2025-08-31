@@ -26,7 +26,13 @@ export default function AmdPage() {
     setError(null)
     
     // Extract DICOM metadata if it's a DICOM file
-    if (file.type === 'application/dicom') {
+    const isDicom = file.name.toLowerCase().endsWith('.dcm') || 
+                   file.name.toLowerCase().endsWith('.dicom') ||
+                   file.type === 'application/dicom' ||
+                   file.type === 'application/x-dicom' ||
+                   file.type === 'application/dicom+json'
+    
+    if (isDicom) {
       extractMetadata(file)
     }
   }
@@ -225,13 +231,13 @@ export default function AmdPage() {
               processingTime={prediction.processing_time}
               imageFile={selectedFile || undefined}
               predictionData={prediction}
-              metadata={metadata || undefined}
+              metadata={metadata?.metadata || undefined}
               analysisType="AMD"
             />
           )}
 
           {metadata && (
-            <MetadataCard metadata={metadata} />
+            <MetadataCard metadata={metadata.metadata} />
           )}
 
           {!prediction && !metadata && (

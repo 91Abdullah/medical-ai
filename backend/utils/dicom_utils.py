@@ -66,6 +66,9 @@ class DicomProcessor:
             # Patient information
             metadata['patient_id'] = self._safe_get_tag(dicom_data, 'PatientID', '')
             metadata['patient_name'] = self._safe_get_tag(dicom_data, 'PatientName', '')
+            metadata['patient_sex'] = self._safe_get_tag(dicom_data, 'PatientSex', '')  # Add gender
+            metadata['patient_age'] = self._safe_get_tag(dicom_data, 'PatientAge', '')
+            metadata['patient_birth_date'] = self._safe_get_tag(dicom_data, 'PatientBirthDate', '')
             
             # Study information
             metadata['study_date'] = self._safe_get_tag(dicom_data, 'StudyDate', '')

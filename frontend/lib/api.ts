@@ -16,18 +16,32 @@ export interface BiomarkerResult {
 }
 
 export interface DicomMetadata {
-  patient_id: string
-  patient_name: string
-  study_date: string
-  modality: string
-  institution_name: string
-  study_description: string
-  series_description: string
-  image_type: string
-  rows: number
-  columns: number
-  pixel_spacing: string[]
-  file_size: number
+  metadata: {
+    patient_id?: string | null
+    patient_name?: string | null
+    patient_sex?: string | null
+    patient_age?: string | null
+    patient_birth_date?: string | null
+    study_date?: string | null
+    study_time?: string | null
+    modality?: string | null
+    institution_name?: string | null
+    manufacturer?: string | null
+    manufacturer_model_name?: string | null
+    study_description?: string | null
+    series_description?: string | null
+    image_type?: string | null
+    rows?: number | null
+    columns?: number | null
+    pixel_spacing?: number[] | null
+    slice_thickness?: number | null
+    bits_allocated?: number | null
+    bits_stored?: number | null
+    file_size?: number | null
+    file_name?: string | null
+  }
+  status: string
+  timestamp: string
 }
 
 export interface ApiError {
@@ -211,6 +225,11 @@ class ApiClient {
   // DICOM metadata extraction
   async extractDicomMetadata(file: File, onProgress?: (progress: UploadProgress) => void): Promise<DicomMetadata> {
     return this.uploadFile('/api/dicom/metadata', file, onProgress)
+  }
+
+  // DICOM image extraction
+  async extractDicomImage(file: File, onProgress?: (progress: UploadProgress) => void): Promise<{ image: string; status: string; timestamp: string }> {
+    return this.uploadFile('/api/dicom/image', file, onProgress)
   }
 
   // Health check

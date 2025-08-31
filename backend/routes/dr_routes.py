@@ -43,7 +43,7 @@ def predict_dr_fundus():
         
         try:
             # Process image
-            if file.content_type == 'application/dicom':
+            if dicom_processor.is_dicom_file(temp_path):
                 dicom_data = dicom_processor.read_dicom_file(temp_path)
                 image = dicom_processor.dicom_to_pil_image(dicom_data)
             else:
@@ -69,7 +69,7 @@ def predict_dr_fundus():
                 confidence=prediction_result['confidence'],
                 processing_time=processing_time,
                 file_name=secure_filename(file.filename),
-                file_size=len(file.read()),
+                file_size=validation_result['size'],  # Use correct file size
                 ip_address=request.remote_addr
             )
             
@@ -148,7 +148,7 @@ def predict_dr_oct():
                 confidence=prediction_result['confidence'],
                 processing_time=processing_time,
                 file_name=secure_filename(file.filename),
-                file_size=len(file.read()),
+                file_size=validation_result['size'],  # Use correct file size
                 ip_address=request.remote_addr
             )
 

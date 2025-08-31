@@ -53,7 +53,7 @@ def predict_biomarker(biomarker_name: str):
         
         try:
             # Process image based on file type
-            if file.content_type == 'application/dicom':
+            if dicom_processor.is_dicom_file(temp_path):
                 # Handle DICOM file
                 dicom_data = dicom_processor.read_dicom_file(temp_path)
                 image = dicom_processor.dicom_to_pil_image(dicom_data)
@@ -63,7 +63,7 @@ def predict_biomarker(biomarker_name: str):
                 log_dicom_metadata(
                     metadata, 
                     file_name=secure_filename(file.filename),
-                    file_size=len(file.read()),
+                    file_size=validation_result['size'],  # Use correct file size
                     ip_address=request.remote_addr
                 )
             else:
@@ -92,7 +92,7 @@ def predict_biomarker(biomarker_name: str):
                 confidence=prediction_result['confidence'],
                 processing_time=processing_time,
                 file_name=secure_filename(file.filename),
-                file_size=len(file.read()),
+                file_size=validation_result['size'],  # Use correct file size
                 ip_address=request.remote_addr
             )
             
@@ -219,7 +219,7 @@ def predict_multiple_biomarkers():
                         confidence=prediction_result['confidence'],
                         processing_time=time.time() - start_time,
                         file_name=secure_filename(file.filename),
-                        file_size=len(file.read()),
+                        file_size=validation_result['size'],  # Use correct file size
                         ip_address=request.remote_addr
                     )
                     

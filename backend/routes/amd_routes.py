@@ -81,7 +81,7 @@ def predict_amd_oct():
                 confidence=prediction_result['confidence'],
                 processing_time=processing_time,
                 file_name=secure_filename(file.filename),
-                file_size=len(file.read()),
+                file_size=validation_result['size'],  # Use correct file size
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get('User-Agent')
             )
@@ -174,7 +174,7 @@ def predict_amd_fundus():
                 confidence=prediction_result['confidence'],
                 processing_time=processing_time,
                 file_name=secure_filename(file.filename),
-                file_size=len(file.read()),
+                file_size=validation_result['size'],  # Use correct file size
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get('User-Agent')
             )

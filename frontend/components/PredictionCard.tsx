@@ -3,7 +3,32 @@
 import React, { useState } from 'react'
 import { CheckCircle, AlertCircle, Clock, TrendingUp, Activity, Download, Image as ImageIcon, Eye } from 'lucide-react'
 import { generatePDFReport, imageToBase64 } from '../lib/pdf-export'
-import { PredictionResult, BiomarkerResult, DicomMetadata } from '../lib/api'
+import { PredictionResult, BiomarkerResult, DicomMetadata, apiClient } from '../lib/api'
+
+type DicomMetadataInner = {
+  patient_id?: string | null
+  patient_name?: string | null
+  patient_sex?: string | null
+  patient_age?: string | null
+  patient_birth_date?: string | null
+  study_date?: string | null
+  study_time?: string | null
+  modality?: string | null
+  institution_name?: string | null
+  manufacturer?: string | null
+  manufacturer_model_name?: string | null
+  study_description?: string | null
+  series_description?: string | null
+  image_type?: string | null
+  rows?: number | null
+  columns?: number | null
+  pixel_spacing?: number[] | null
+  slice_thickness?: number | null
+  bits_allocated?: number | null
+  bits_stored?: number | null
+  file_size?: number | null
+  file_name?: string | null
+}
 
 interface PredictionCardProps {
   title: string
@@ -18,7 +43,7 @@ interface PredictionCardProps {
   imageFile?: File
   predictionData?: PredictionResult
   biomarkerData?: BiomarkerResult[]
-  metadata?: DicomMetadata
+  metadata?: DicomMetadata | DicomMetadataInner
   analysisType?: 'AMD' | 'Glaucoma' | 'DR' | 'Biomarkers'
 }
 
@@ -40,19 +65,79 @@ export function PredictionCard({
 }: PredictionCardProps) {
   const [showImage, setShowImage] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageLoading, setImageLoading] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
 
-  // Generate image URL when needed (no premature revoke)
+  // Check if current image file is DICOM
+  const isDicom = imageFile ? (
+    imageFile.name.toLowerCase().endsWith('.dcm') || 
+    imageFile.name.toLowerCase().endsWith('.dicom') ||
+    imageFile.type === 'application/dicom'
+  ) : false
+
+  // Normalize metadata access - handle both full response and inner metadata object
+  const normalizedMetadata = metadata && 'metadata' in metadata ? metadata.metadata : metadata
+
+  // Helper function to check if a value is not empty
+  const hasValue = (value: any): boolean => {
+    return value !== null && value !== undefined && value !== ''
+  }  // Generate image URL when needed (no premature revoke)
   React.useEffect(() => {
-    if (!showImage || !imageFile) {
+    if (!imageFile) {
       setImageUrl(null);
+      setImageLoading(false);
+      setImageError(null);
       return;
     }
 
+    // Check if it's a DICOM file
+    const fileIsDicom = imageFile.name.toLowerCase().endsWith('.dcm') || 
+                   imageFile.name.toLowerCase().endsWith('.dicom') ||
+                   imageFile.type === 'application/dicom'
+
+    if (fileIsDicom) {
+      // Automatically show DICOM images since we can extract them
+      if (!showImage) {
+        setShowImage(true);
+      }
+      
+      // Extract image from DICOM file
+      const extractDicomImage = async () => {
+        setImageLoading(true);
+        setImageError(null);
+        try {
+          const result = await apiClient.extractDicomImage(imageFile)
+          setImageUrl(result.image)
+          setImageLoading(false);
+        } catch (error) {
+          console.error('Failed to extract DICOM image:', error)
+          setImageUrl(null)
+          setImageLoading(false);
+          setImageError('Failed to extract image from DICOM file')
+        }
+      }
+      extractDicomImage()
+      return
+    }
+
+    // For regular images, only process if showImage is true
+    if (!showImage) {
+      setImageUrl(null);
+      setImageLoading(false);
+      setImageError(null);
+      return;
+    }
+
+    // For regular images
+    setImageLoading(false);
+    setImageError(null);
     const objectUrl = URL.createObjectURL(imageFile);
     setImageUrl(objectUrl);
 
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (!fileIsDicom) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
   }, [showImage, imageFile]);
 
@@ -76,8 +161,25 @@ export function PredictionCard({
 
     try {
       let imageBase64: string | undefined
+      
       if (imageFile) {
-        imageBase64 = await imageToBase64(imageFile)
+        // Check if it's a DICOM file
+        const isDicom = imageFile.name.toLowerCase().endsWith('.dcm') || 
+                       imageFile.name.toLowerCase().endsWith('.dicom') ||
+                       imageFile.type === 'application/dicom'
+        
+        if (isDicom) {
+          // Extract image from DICOM file for PDF
+          try {
+            const result = await apiClient.extractDicomImage(imageFile)
+            imageBase64 = result.image
+          } catch (error) {
+            console.error('Failed to extract DICOM image for PDF:', error)
+            imageBase64 = undefined
+          }
+        } else {
+          imageBase64 = await imageToBase64(imageFile)
+        }
       }
 
       const reportData = {
@@ -89,14 +191,40 @@ export function PredictionCard({
           processing_time: processingTime || 0
         },
         biomarkers: biomarkerData,
-        metadata,
+        metadata: metadata && 'metadata' in metadata ? metadata : (normalizedMetadata ? {
+          metadata: normalizedMetadata,
+          status: 'success',
+          timestamp: new Date().toISOString()
+        } : undefined),
         image: imageBase64
       }
 
       generatePDFReport(reportData)
     } catch (error) {
       console.error('Failed to export PDF:', error)
-      alert('Failed to export PDF report. Please try again.')
+      if (error instanceof Error && error.message.includes('DICOM')) {
+        alert('DICOM images cannot be included in PDF reports. The report will be generated without the image.')
+        // Try again without image
+        const reportData = {
+          analysisType,
+          prediction: predictionData || {
+            prediction,
+            confidence,
+            timestamp,
+            processing_time: processingTime || 0
+          },
+          biomarkers: biomarkerData,
+          metadata: metadata && 'metadata' in metadata ? metadata : (normalizedMetadata ? {
+            metadata: normalizedMetadata,
+            status: 'success',
+            timestamp: new Date().toISOString()
+          } : undefined),
+          image: undefined
+        }
+        generatePDFReport(reportData)
+      } else {
+        alert('Failed to export PDF report. Please try again.')
+      }
     }
   }
 
@@ -189,7 +317,7 @@ export function PredictionCard({
                   className="inline-flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                 >
                   <Eye className="h-4 w-4" />
-                  <span>{showImage ? 'Hide' : 'Show'} Image</span>
+                  <span>{(showImage && !isDicom) ? 'Hide' : 'Show'} Image</span>
                 </button>
               )}
             </div>
@@ -207,7 +335,7 @@ export function PredictionCard({
         </div>
 
         {/* Image Display */}
-        {showImage && imageUrl && (
+        {(showImage || (imageFile && isDicom)) && (
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
@@ -215,12 +343,46 @@ export function PredictionCard({
                 <span>Analyzed Image</span>
               </div>
               <div className="relative">
-                <img
-                  src={imageUrl}
-                  alt="Analyzed medical image"
-                  className="w-full max-w-md mx-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
-                  style={{ maxHeight: '300px', objectFit: 'contain' }}
-                />
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt="Analyzed medical image"
+                    className="w-full max-w-md mx-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                    style={{ maxHeight: '300px', objectFit: 'contain' }}
+                  />
+                ) : imageFile ? (
+                  <div className="w-full max-w-md mx-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm bg-gray-50 dark:bg-gray-800 p-8 text-center">
+                    <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    {imageLoading ? (
+                      <>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          Loading DICOM Image...
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          Extracting image from DICOM file...
+                        </p>
+                      </>
+                    ) : imageError ? (
+                      <>
+                        <p className="text-sm text-red-600 dark:text-red-400 mb-2">
+                          Failed to Load Image
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          {imageError}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          DICOM Image Processed
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          The image has been processed by our AI model.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

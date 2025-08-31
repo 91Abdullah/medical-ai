@@ -23,7 +23,13 @@ export default function GlaucomaPage() {
     setError(null)
     
     // Extract DICOM metadata if it's a DICOM file
-    if (file.type === 'application/dicom') {
+    const isDicom = file.name.toLowerCase().endsWith('.dcm') || 
+                   file.name.toLowerCase().endsWith('.dicom') ||
+                   file.type === 'application/dicom' ||
+                   file.type === 'application/x-dicom' ||
+                   file.type === 'application/dicom+json'
+    
+    if (isDicom) {
       extractMetadata(file)
     }
   }
@@ -220,7 +226,7 @@ export default function GlaucomaPage() {
           )}
 
           {metadata && (
-            <MetadataCard metadata={metadata} />
+            <MetadataCard metadata={metadata.metadata} />
           )}
 
           {!prediction && !metadata && (
