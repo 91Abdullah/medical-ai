@@ -77,12 +77,12 @@ def predict_dr_fundus():
             response = {
                 'prediction': prediction_result['prediction'],
                 'confidence': prediction_result['confidence'],
-                'probabilities': prediction_result['probabilities'],
+                'class_probabilities': prediction_result['class_probabilities'],
+                'classes': prediction_result['classes'],
                 'processing_time': processing_time,
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()),
                 'model_info': {
                     'type': 'DR Fundus Classifier',
-                    'classes': prediction_result['classes'],
                     'model_version': '1.0'
                 }
             }
@@ -156,12 +156,12 @@ def predict_dr_oct():
             response = {
                 'prediction': prediction_result['prediction'],
                 'confidence': prediction_result['confidence'],
-                'probabilities': prediction_result['probabilities'],
+                'class_probabilities': prediction_result['class_probabilities'],
+                'classes': prediction_result['classes'],
                 'processing_time': processing_time,
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()),
                 'model_info': {
                     'type': 'DR OCT Classifier',
-                    'classes': prediction_result['classes'],
                     'model_version': '1.0'
                 }
             }

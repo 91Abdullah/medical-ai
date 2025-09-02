@@ -76,7 +76,7 @@ def extract_dicom_metadata():
             log_dicom_metadata(
                 metadata,
                 file_name=secure_filename(file.filename),
-                file_size=validation_result['size'],  # Use correct file size
+                file_size=validation_result['size'],
                 file_hash=file_hash,
                 ip_address=request.remote_addr
             )
@@ -97,6 +97,71 @@ def extract_dicom_metadata():
         return jsonify({
             'error': 'Internal server error',
             'message': 'Failed to extract DICOM metadata'
+        }), 500
+
+@api_bp.route('/dicom/image', methods=['POST'])
+def extract_dicom_image():
+    """Extract image from DICOM file and return as base64."""
+    try:
+        # Validate request
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Validate file
+        validation_result = validate_file(file)
+        if not validation_result['valid']:
+            return jsonify({'error': validation_result['message']}), 400
+        
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.dcm') as temp_file:
+            file.save(temp_file.name)
+            temp_path = temp_file.name
+        
+        try:
+            # Check if it's a DICOM file
+            if not dicom_processor.is_dicom_file(temp_path):
+                return jsonify({'error': 'File must be a DICOM file'}), 400
+            
+            # Read DICOM file
+            dicom_data = dicom_processor.read_dicom_file(temp_path)
+            
+            # Extract image
+            pil_image = dicom_processor.dicom_to_pil_image(dicom_data)
+            
+            # Convert to base64
+            import base64
+            from io import BytesIO
+            
+            buffer = BytesIO()
+            pil_image.save(buffer, format='PNG')
+            image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            image_data_url = f'data:image/png;base64,{image_base64}'
+            
+            return jsonify({
+                'success': True,
+                'image_base64': image_data_url,
+                'metadata': {
+                    'width': pil_image.width,
+                    'height': pil_image.height,
+                    'format': 'PNG'
+                },
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
+            }), 200
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+    
+    except Exception as e:
+        logger.error(f"Error extracting DICOM image: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Internal server error',
+            'message': 'Failed to extract image from DICOM file'
         }), 500
 
 @api_bp.route('/stats', methods=['GET'])
@@ -153,63 +218,4 @@ def predict_dr():
         return jsonify({
             'error': 'Internal server error',
             'message': 'DR prediction not yet implemented'
-        }), 500
-
-@api_bp.route('/dicom/image', methods=['POST'])
-def extract_dicom_image():
-    """Extract image from DICOM file."""
-    try:
-        # Validate request
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
-        
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        # Validate file
-        validation_result = validate_file(file)
-        if not validation_result['valid']:
-            return jsonify({'error': validation_result['message']}), 400
-        
-        # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.dcm') as temp_file:
-            file.save(temp_file.name)
-            temp_path = temp_file.name
-        
-        try:
-            # Check if it's a DICOM file
-            if not dicom_processor.is_dicom_file(temp_path):
-                return jsonify({'error': 'File must be a DICOM file'}), 400
-            
-            # Read DICOM file
-            dicom_data = dicom_processor.read_dicom_file(temp_path)
-            
-            # Convert to PIL image
-            pil_image = dicom_processor.dicom_to_pil_image(dicom_data)
-            
-            # Convert to base64
-            import base64
-            from io import BytesIO
-            
-            buffer = BytesIO()
-            pil_image.save(buffer, format='PNG')
-            image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            
-            return jsonify({
-                'image': f'data:image/png;base64,{image_base64}',
-                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()),
-                'status': 'success'
-            }), 200
-            
-        finally:
-            # Clean up temporary file
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-    
-    except Exception as e:
-        logger.error(f"Error extracting DICOM image: {e}", exc_info=True)
-        return jsonify({
-            'error': 'Internal server error',
-            'message': 'Failed to extract DICOM image'
         }), 500

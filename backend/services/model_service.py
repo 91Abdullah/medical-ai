@@ -92,7 +92,7 @@ class DROCTModel(BaseModel):
         return {
             "prediction": self.classes[idx],          # ['DR','Normal']
             "confidence": float(probs[idx]),
-            "probabilities": {c: float(p) for c, p in zip(self.classes, probs)},
+            "class_probabilities": {c: float(p) for c, p in zip(self.classes, probs)},
             "classes": self.classes
     }
 
@@ -141,7 +141,7 @@ class DRFundusModel(BaseModel):
             return {
                 'prediction': prediction,
                 'confidence': margin_confidence,
-                'probabilities': probabilities.cpu().numpy()[0].tolist(),
+                'class_probabilities': {c: float(p) for c, p in zip(self.classes, probabilities.cpu().numpy()[0])},
                 'classes': self.classes
             }
             
@@ -150,7 +150,11 @@ class DRFundusModel(BaseModel):
             return {
                 'prediction': 'No DR',
                 'confidence': 0.0,
-                'probabilities': [1.0, 0.0, 0.0],
+                'class_probabilities': {
+                    'No DR': 1.0,
+                    'Early pathology': 0.0,
+                    'Advanced pathology': 0.0
+                },
                 'classes': self.classes
             }
     
@@ -167,7 +171,7 @@ class AMDOCTModel(BaseModel):
     
     def __init__(self, model_path: str, device: str = 'cpu'):
         super().__init__(model_path, device)
-        self.classes = ['Control', 'Early', 'Intermediate', 'Late']
+        self.classes = ['Normal', 'Early', 'Intermediate', 'Late']
         
     def load_model(self) -> None:
         """Load AMD OCT PyTorch model (.pt)."""
@@ -209,10 +213,11 @@ class AMDOCTModel(BaseModel):
             return {
                 'prediction': prediction,
                 'confidence': confidence_score,
-                'class_probabilities': {
+                'probabilities': {
                     cls: float(prob) for cls, prob in 
                     zip(self.classes, probabilities[0].cpu().numpy())
-                }
+                },
+                'classes': self.classes
             }
             
         except Exception as e:
@@ -221,12 +226,13 @@ class AMDOCTModel(BaseModel):
             return {
                 'prediction': 'Normal',
                 'confidence': 0.85,
-                'class_probabilities': {
+                'probabilities': {
                     'Normal': 0.85,
-                    'Early AMD': 0.10,
-                    'Intermediate AMD': 0.03,
-                    'Advanced AMD': 0.02
-                }
+                    'Early': 0.10,
+                    'Intermediate': 0.03,
+                    'Late': 0.02
+                },
+                'classes': self.classes
             }
     
     def _create_dummy_model(self):
@@ -369,7 +375,11 @@ class AMDFundusModel(BaseModel):
             return {
                 'prediction': prediction,
                 'confidence': float(confidence),
-                'probability': float(prob),  # P(AMD Present) if binary; best class prob otherwise
+                'class_probabilities': {
+                    self.classes[0]: float(1 - prob),  # Probability of "No AMD"
+                    self.classes[1]: float(prob)       # Probability of "AMD Present"
+                },
+                'classes': self.classes
             }
 
         except Exception as e:
@@ -377,7 +387,11 @@ class AMDFundusModel(BaseModel):
             return {
                 'prediction': 'No AMD',
                 'confidence': 0.92,
-                'probability': 0.08
+                'probabilities': {
+                    'No AMD': 0.92,
+                    'AMD Present': 0.08
+                },
+                'classes': self.classes
             }
 
     def _create_dummy_model(self):
@@ -446,6 +460,7 @@ class GlaucomaFundusModel(BaseModel):
                 "prediction": self.classes[idx],
                 "confidence": float(probs[idx]),
                 "class_probabilities": {c: float(p) for c, p in zip(self.classes, probs)},
+                "classes": self.classes
             }
             
         except Exception as e:
@@ -455,9 +470,9 @@ class GlaucomaFundusModel(BaseModel):
                 'confidence': 0.88,
                 'class_probabilities': {
                     'No Glaucoma': 0.88,
-                    'Glaucoma Suspected': 0.08,
-                    'Glaucoma': 0.04
-                }
+                    'Glaucoma Suspected': 0.12
+                },
+                'classes': self.classes
             }
     
     def _create_dummy_tf_model(self):

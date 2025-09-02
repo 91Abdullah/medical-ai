@@ -90,6 +90,7 @@ def predict_glaucoma_fundus():
             response = {
                 'prediction': prediction_result['prediction'],
                 'confidence': prediction_result['confidence'],
+                'classes': prediction_result['classes'],
                 'class_probabilities': prediction_result['class_probabilities'],
                 'processing_time': processing_time,
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()),

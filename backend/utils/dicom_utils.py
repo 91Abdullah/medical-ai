@@ -212,8 +212,8 @@ class DicomProcessor:
         
         # Fields to anonymize
         sensitive_fields = [
-            'patient_name',
-            'patient_id'
+            # 'patient_name',
+            # 'patient_id'
         ]
         
         for field in sensitive_fields:

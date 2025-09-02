@@ -70,7 +70,8 @@ def predict_amd_oct():
             amd_model = model_manager.get_amd_oct_model()
             
             prediction_result = amd_model.predict(input_tensor)
-            
+            print(prediction_result)
+
             processing_time = time.time() - start_time
             
             # Log inference
@@ -90,7 +91,8 @@ def predict_amd_oct():
             response = {
                 'prediction': prediction_result['prediction'],
                 'confidence': prediction_result['confidence'],
-                'class_probabilities': prediction_result['class_probabilities'],
+                'classes': prediction_result['classes'],
+                'class_probabilities': prediction_result['probabilities'],
                 'processing_time': processing_time,
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()),
                 'model_type': 'AMD OCT Multiclass Classifier'
@@ -183,7 +185,8 @@ def predict_amd_fundus():
             response = {
                 'prediction': prediction_result['prediction'],
                 'confidence': prediction_result['confidence'],
-                'probability': prediction_result['probability'],
+                'class_probabilities': prediction_result['class_probabilities'],
+                'classes': prediction_result['classes'],
                 'processing_time': processing_time,
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()),
                 'model_type': 'AMD Fundus Binary Classifier'
