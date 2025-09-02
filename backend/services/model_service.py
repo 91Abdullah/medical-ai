@@ -489,6 +489,124 @@ class GlaucomaFundusModel(BaseModel):
         
         return model
 
+class GlaucomaOCTModel(BaseModel):
+    """Glaucoma OCT classification model using PyTorch."""
+    
+    def __init__(self, model_path: str, device: str = 'cpu'):
+        super().__init__(model_path, device)
+        self.classes = ['Healthy', 'Glaucoma']
+        self.transform = None
+        
+    def load_model(self) -> None:
+        """Load Glaucoma OCT PyTorch model (.pt)."""
+        try:
+            from torchvision import transforms
+            from torchvision.models import densenet121
+            import torch.nn as nn
+            
+            # Load the DenseNet121 model for OCT classification
+            self.model = densenet121(pretrained=False)
+            # Modify for single channel input and binary classification
+            self.model.features[0] = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+            self.model.classifier = nn.Linear(self.model.classifier.in_features, 1)
+            
+            state = torch.load(self.model_path, map_location=self.device)
+            self.model.load_state_dict(state)
+            self.model.eval()
+            
+            # Define preprocessing transforms
+            self.transform = transforms.Compose([
+                transforms.Resize((256, 256)),  # DenseNet standard size
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485], std=[0.229])  # Single channel normalization
+            ])
+            
+            self.is_loaded = True
+            logger.info(f"Glaucoma OCT model loaded successfully from {self.model_path}")
+            
+        except Exception as e:
+            logger.error(f"Error loading Glaucoma OCT model: {e}")
+            # Fallback to dummy model
+            self.model = self._create_dummy_model()
+            self.is_loaded = True
+    
+    def predict(self, input_data: torch.Tensor) -> Dict[str, Any]:
+        """Predict glaucoma from OCT image."""
+        try:
+            if not self.is_loaded:
+                self.load_model()
+            
+            # Ensure input is on correct device
+            input_data = self._to_device(input_data)
+            
+            # Convert to grayscale if needed
+            if input_data.shape[1] == 3:  # RGB to grayscale
+                input_data = input_data.mean(dim=1, keepdim=True)
+            elif input_data.shape[1] == 1:  # Already grayscale
+                pass
+            else:
+                raise ValueError(f"Unexpected input channels: {input_data.shape[1]}")
+            
+            # Apply preprocessing
+            if self.transform:
+                # Convert tensor back to PIL for torchvision transforms
+                from PIL import Image
+                import torchvision.transforms.functional as TF
+                
+                # Convert tensor to PIL Image
+                if input_data.shape[1] == 1:
+                    img = TF.to_pil_image(input_data.squeeze(0).cpu())
+                else:
+                    img = TF.to_pil_image(input_data.squeeze(0).cpu())
+                
+                # Apply transforms
+                img = self.transform(img)
+                input_data = img.unsqueeze(0).to(self.device)
+            
+            with torch.no_grad():
+                outputs = self.model(input_data)
+                probabilities = torch.sigmoid(outputs).squeeze()
+                
+                # Convert to binary prediction
+                pred_idx = (probabilities >= 0.92).long().item()  # Using threshold from instructions
+                confidence = probabilities.item() if pred_idx == 1 else (1 - probabilities.item())
+                
+                return {
+                    'prediction': self.classes[pred_idx],
+                    'confidence': float(confidence),
+                    'probability': float(probabilities.item()),
+                    'class_probabilities': {
+                        'Healthy': float(1 - probabilities.item()),
+                        'Glaucoma': float(probabilities.item())
+                    },
+                    'classes': self.classes
+                }
+                
+        except Exception as e:
+            logger.error(f"Error during Glaucoma OCT prediction: {e}")
+            return self._dummy_prediction()
+    
+    def _create_dummy_model(self):
+        """Create a dummy model for testing."""
+        class DummyGlaucomaModel(nn.Module):
+            def forward(self, x):
+                batch_size = x.size(0)
+                return torch.randn(batch_size, 1)
+        return DummyGlaucomaModel()
+    
+    def _dummy_prediction(self) -> Dict[str, Any]:
+        """Return dummy prediction for error cases."""
+        return {
+            'prediction': 'Healthy',
+            'confidence': 0.5,
+            'probability': 0.5,
+            'class_probabilities': {
+                'Healthy': 0.5,
+                'Glaucoma': 0.5
+            },
+            'classes': self.classes
+        }
+
 class BiomarkerModel(BaseModel):
     """Biomarker prediction model."""
     

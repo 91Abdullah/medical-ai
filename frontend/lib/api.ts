@@ -157,6 +157,10 @@ class ApiClient {
     return this.uploadFile('/api/glaucoma/fundus', file, onProgress)
   }
 
+  async predictGlaucomaOct(file: File, onProgress?: (progress: UploadProgress) => void): Promise<PredictionResult> {
+    return this.uploadFile('/api/glaucoma/oct', file, onProgress)
+  }
+
   // DR (Diabetic Retinopathy) predictions
   async predictDrFundus(file: File, onProgress?: (progress: UploadProgress) => void): Promise<PredictionResult> {
     return this.uploadFile('/api/dr/fundus', file, onProgress)

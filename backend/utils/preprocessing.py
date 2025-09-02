@@ -17,11 +17,9 @@ class ImagePreprocessor:
     def __init__(self):
         # Standard medical image preprocessing transforms
         self.oct_transforms = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.Lambda(lambda img: img if img.mode == 'RGB' else img.convert('RGB')),
+            transforms.Resize((256, 256)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                               std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=[0.485], std=[0.229])  # Single channel normalization
         ])
 
         self.fundus_amd_transforms = transforms.Compose([
@@ -121,6 +119,97 @@ class ImagePreprocessor:
         except Exception as e:
             logger.error(f"Error preprocessing OCT Keras image: {e}")
             raise        
+
+    def preprocess_oct(self, image: Union[str, Image.Image, np.ndarray], size=(256, 256)) -> torch.Tensor:
+        """Preprocess OCT image for PyTorch models (grayscale)."""
+        try:
+            if isinstance(image, str):
+                image = self.load_image(image)
+            elif isinstance(image, np.ndarray):
+                image = Image.fromarray(image)
+            
+            # Convert to grayscale for OCT images
+            if image.mode != 'L':
+                image = image.convert('L')
+            
+            # Apply OCT-specific preprocessing
+            processed = self.oct_transforms(image)
+            
+            # Add batch dimension
+            return processed.unsqueeze(0)
+            
+        except Exception as e:
+            logger.error(f"Error preprocessing OCT image: {e}")
+            raise
+
+        except Exception as e:
+            logger.error(f"Error preprocessing OCT image: {e}")
+            raise
+
+    # Batch Inference Utility for Glaucoma OCT Model
+    def batch_predict_glaucoma_oct(image_paths, model_path="models/glaucoma_oct.pt", threshold=0.92):
+        """
+        Perform batch inference on multiple OCT images for glaucoma detection.
+        
+        Args:
+            image_paths: List of paths to OCT images
+            model_path: Path to the glaucoma OCT model
+            threshold: Classification threshold (default: 0.92)
+        
+        Returns:
+            List of dictionaries with prediction results
+        """
+        import torch
+        import torch.nn as nn
+        from torchvision.models import densenet121
+        
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        # Load and setup model using torchvision DenseNet
+        model = densenet121(pretrained=False)
+        # Modify for single channel input and binary classification
+        model.features[0] = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        model.classifier = nn.Linear(model.classifier.in_features, 1)
+        
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.eval()
+        model.to(device)
+        
+        # Setup preprocessing
+        preprocess = transforms.Compose([
+            transforms.Resize((224, 224)),  # DenseNet standard size
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485], std=[0.229])
+        ])
+        
+        results = []
+        with torch.no_grad():
+            for p in image_paths:
+                try:
+                    # Load and preprocess image
+                    image = Image.open(p).convert('L')  # Convert to grayscale
+                    input_tensor = preprocess(image).unsqueeze(0).to(device)
+                    
+                    # Make prediction
+                    prob = torch.sigmoid(model(input_tensor)).item()
+                    pred = int(prob >= threshold)
+                    
+                    results.append({
+                        "image": os.path.basename(p), 
+                        "probability": prob, 
+                        "prediction": pred,
+                        "class": "Glaucoma" if pred == 1 else "Healthy"
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing {p}: {e}")
+                    results.append({
+                        "image": os.path.basename(p), 
+                        "probability": 0.0, 
+                        "prediction": 0,
+                        "class": "Error"
+                    })
+        
+        return results
 
     def preprocess_keras(self, image: Union[str, Image.Image, np.ndarray], size=(256, 256)) -> np.ndarray:
         try:

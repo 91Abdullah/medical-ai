@@ -1,4 +1,4 @@
-from .model_service import AMDOCTModel, AMDFundusModel, DROCTModel, GlaucomaFundusModel, BiomarkerModel, DRFundusModel
+from .model_service import AMDOCTModel, AMDFundusModel, DROCTModel, GlaucomaFundusModel, BiomarkerModel, DRFundusModel, GlaucomaOCTModel
 import os
 import logging
 from typing import Dict, Any
@@ -44,6 +44,15 @@ class ModelManager:
         if model_key not in self.loaded_models:
             model_path = os.path.join(self.models_dir, 'best.keras')
             self.loaded_models[model_key] = GlaucomaFundusModel(model_path, self.device)
+            self.loaded_models[model_key].load_model()
+        return self.loaded_models[model_key]
+    
+    def get_glaucoma_oct_model(self) -> GlaucomaOCTModel:
+        """Get or load Glaucoma OCT model."""
+        model_key = 'glaucoma_oct'
+        if model_key not in self.loaded_models:
+            model_path = os.path.join(self.models_dir, 'glaucoma_oct.pt')
+            self.loaded_models[model_key] = GlaucomaOCTModel(model_path, self.device)
             self.loaded_models[model_key].load_model()
         return self.loaded_models[model_key]
     
