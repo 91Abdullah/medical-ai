@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Download, FileImage, Eye } from 'lucide-react'
-import { generatePDFReport, imageToBase64, chartToBase64 } from '../lib/pdf-export'
+import { generatePDFReport, generateBiomarkerPDFReport, imageToBase64, chartToBase64 } from '../lib/pdf-export'
 import { PredictionResult, BiomarkerResult, DicomMetadata } from '../lib/api'
 
 interface ImagePreviewCardProps {
@@ -13,7 +13,8 @@ interface ImagePreviewCardProps {
   analysisType: 'AMD' | 'Glaucoma' | 'DR' | 'Biomarkers'
   severityChartRef?: React.RefObject<HTMLElement>
   gaugeChartRefs?: React.RefObject<HTMLElement>[]
-  className?: string
+  className?: string,
+  report?: true | false
 }
 
 export function ImagePreviewCard({
@@ -24,7 +25,8 @@ export function ImagePreviewCard({
   analysisType,
   severityChartRef,
   gaugeChartRefs,
-  className = ''
+  className = '',
+  report = true
 }: ImagePreviewCardProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -88,8 +90,34 @@ export function ImagePreviewCard({
 
     setExporting(true)
     try {
-      // Convert image to base64 for PDF
-      const imageBase64 = await imageToBase64(imageFile)
+      // Convert image to base64 for PDF (handle DICOM files specially)
+      let imageBase64: string
+      const isDicom = imageFile.name.toLowerCase().endsWith('.dcm') || 
+                     imageFile.name.toLowerCase().endsWith('.dicom') ||
+                     imageFile.type === 'application/dicom' ||
+                     imageFile.type === 'application/x-dicom' ||
+                     imageFile.type === 'application/dicom+json'
+      
+      if (isDicom) {
+        // For DICOM files, use the backend conversion service
+        const formData = new FormData()
+        formData.append('file', imageFile)
+        const response = await fetch('/api/dicom/image', {
+          method: 'POST',
+          body: formData
+        })
+        if (!response.ok) {
+          throw new Error(`DICOM processing failed: ${response.statusText}`)
+        }
+        const result = await response.json()
+        if (!result.success || !result.image_base64) {
+          throw new Error('Failed to extract image from DICOM file')
+        }
+        imageBase64 = result.image_base64
+      } else {
+        // For regular image files, use direct conversion
+        imageBase64 = await imageToBase64(imageFile)
+      }
 
       // Capture chart images if refs are provided
       let severityChartImage: string | undefined
@@ -143,8 +171,12 @@ export function ImagePreviewCard({
 
       console.log('PDF Report Data:', reportData)
 
-      // Generate and download PDF
-      generatePDFReport(reportData)
+      // Generate and download PDF - use biomarker-specific function if biomarkers are present
+      if (biomarkers && biomarkers.length > 0) {
+        generateBiomarkerPDFReport(reportData)
+      } else {
+        generatePDFReport(reportData)
+      }
     } catch (error) {
       console.error('Error exporting PDF:', error)
       alert('Error exporting PDF. Please try again.')
@@ -174,14 +206,16 @@ export function ImagePreviewCard({
           <Eye className="h-5 w-5 mr-2" />
           Image Preview
         </h3>
-        <button
-          onClick={handleExportPDF}
-          disabled={exporting}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md transition-colors"
-        >
-          <Download className="h-4 w-4" />
-          <span>{exporting ? 'Exporting...' : 'Export PDF'}</span>
-        </button>
+        {report && (
+          <button
+            onClick={handleExportPDF}
+            disabled={exporting}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            <span>{exporting ? 'Exporting...' : 'Export PDF'}</span>
+          </button>
+        )}
       </div>
 
       <div className="space-y-4">

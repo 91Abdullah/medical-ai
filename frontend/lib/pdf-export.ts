@@ -1,5 +1,5 @@
 import { PredictionResult, BiomarkerResult, DicomMetadata } from './api'
-import html2canvas from 'html2canvas'
+import * as html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 
 interface ReportData {
@@ -35,7 +35,7 @@ export async function generatePDFReport(data: ReportData): Promise<void> {
     document.body.appendChild(tempDiv)
 
     // Use html2canvas to convert HTML to canvas with high quality settings
-    const canvas = await html2canvas(tempDiv, {
+    const canvas = await (html2canvas as any)(tempDiv, {
       width: 794,
       useCORS: true,
       allowTaint: false,
@@ -238,7 +238,7 @@ export function chartToBase64(chartElement: HTMLElement): Promise<string> {
         chartElement.style.width = `${maxWidth}px`;
       }
 
-      html2canvas(chartElement, {
+      (html2canvas as any)(chartElement, {
         useCORS: true,
         allowTaint: false,
         width: Math.min(chartElement.offsetWidth, maxWidth),
@@ -293,6 +293,198 @@ export function imageToBase64(file: File): Promise<string> {
     reader.onerror = () => reject(new Error('Failed to read file'))
     reader.readAsDataURL(file)
   })
+}
+
+// Multi-page PDF export specifically for biomarker reports using captured chart images
+export async function generateBiomarkerPDFReport(data: ReportData): Promise<void> {
+  try {
+
+    // Create PDF document with standard settings like other reports
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'in',
+      format: [8.5, 11], // Standard letter size like other reports
+      compress: true,
+      precision: 16,
+      userUnit: 1.0,
+      putOnlyUsedFonts: true
+    })
+
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const margin = 0.75 // 0.75 inches margin like other reports
+    const contentWidth = pageWidth - (margin * 2)
+    const contentHeight = pageHeight - (margin * 2)
+
+    // Add header with standard styling
+    let yPosition = margin
+    pdf.setFontSize(20)
+    pdf.setTextColor(30, 64, 175) // #1e40af - same blue as other reports
+    pdf.text('Medical AI Diagnostics', margin, yPosition)
+    
+    yPosition += 0.3
+    pdf.setFontSize(14)
+    pdf.setTextColor(107, 114, 128) // #6b7280 - same gray as other reports
+    pdf.text('Biomarker Visualization Report', margin, yPosition)
+    
+    yPosition += 0.15
+    pdf.setFontSize(10)
+    pdf.setTextColor(156, 163, 175) // #9ca3af - same light gray as other reports
+    pdf.text(`Generated on ${new Date().toLocaleDateString()}`, margin, yPosition)
+    
+    yPosition += 0.4
+
+    // Add patient info if available (same styling as other reports)
+    if (data.patientInfo?.name || data.patientInfo?.id) {
+      pdf.setFontSize(12)
+      pdf.setTextColor(30, 64, 175)
+      pdf.text('Patient Information:', margin, yPosition)
+      yPosition += 0.25
+      
+      pdf.setFontSize(10)
+      pdf.setTextColor(0, 0, 0)
+      if (data.patientInfo.name) {
+        pdf.text(`Name: ${data.patientInfo.name}`, margin + 0.1, yPosition)
+        yPosition += 0.15
+      }
+      if (data.patientInfo.id) {
+        pdf.text(`ID: ${data.patientInfo.id}`, margin + 0.1, yPosition)
+        yPosition += 0.15
+      }
+      yPosition += 0.25
+    }
+
+    // Add charts section header
+    pdf.setFontSize(14)
+    pdf.setTextColor(30, 64, 175)
+    pdf.text('Biomarker Charts:', margin, yPosition)
+    yPosition += 0.25
+
+    // Add captured chart images with proper spacing
+    const charts = data.chartData?.gaugeCharts || []
+    
+    for (let i = 0; i < charts.length; i++) {
+      const chart = charts[i]
+      
+      // Check if we need a new page for this chart
+      const chartHeight = 2.5 // 2.5 inches for charts
+      const requiredSpace = chartHeight + 0.8 // chart + spacing
+      
+      if (yPosition + requiredSpace > pageHeight - margin) {
+        pdf.addPage()
+        yPosition = margin
+        
+        // Re-add header on new page
+        pdf.setFontSize(14)
+        pdf.setTextColor(30, 64, 175)
+        pdf.text('Biomarker Charts (continued):', margin, yPosition)
+        yPosition += 0.25
+      }
+
+      // Add chart title
+      pdf.setFontSize(11)
+      pdf.setTextColor(0, 0, 0)
+      pdf.text(chart.name, margin, yPosition)
+      yPosition += 0.2
+
+      // Add chart image with proper aspect ratio
+      try {
+        // Use standard dimensions that maintain aspect ratio
+        const chartWidth = 3.0 // 3 inches width
+        const chartHeight = 2.25 // 2.25 inches height (4:3 aspect ratio)
+        
+        // Center the chart on the page
+        const chartX = margin + (contentWidth - chartWidth) / 2
+        
+        pdf.addImage(chart.image, 'PNG', chartX, yPosition, chartWidth, chartHeight)
+        yPosition += chartHeight + 0.3
+      } catch (error) {
+        console.error(`Failed to add chart ${chart.name}:`, error)
+        pdf.setFontSize(10)
+        pdf.setTextColor(239, 68, 68) // Red color for error
+        pdf.text(`Error: Could not load chart for ${chart.name}`, margin, yPosition)
+        yPosition += 0.3
+      }
+    }
+
+    // Add biomarker values table if space allows
+    if (data.biomarkers && data.biomarkers.length > 0 && yPosition < pageHeight - 1.5) {
+      yPosition += 0.3
+      pdf.setFontSize(14)
+      pdf.setTextColor(30, 64, 175)
+      pdf.text('Biomarker Values:', margin, yPosition)
+      yPosition += 0.25
+
+      // Add table headers
+      pdf.setFontSize(10)
+      pdf.setTextColor(0, 0, 0)
+      pdf.text('Biomarker', margin, yPosition)
+      pdf.text('Value', margin + 2.5, yPosition)
+      pdf.text('Status', margin + 4.0, yPosition)
+      yPosition += 0.1
+      
+      // Draw line under headers
+      pdf.setDrawColor(200, 200, 200)
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition)
+      yPosition += 0.1
+
+      // Add biomarker data
+      for (const biomarker of data.biomarkers) {
+        if (yPosition > pageHeight - 0.2) {
+          pdf.addPage()
+          yPosition = margin
+        }
+        
+        pdf.text(biomarker.biomarker_name, margin, yPosition)
+        pdf.text(biomarker.predicted_value.toString(), margin + 2.5, yPosition)
+        pdf.text(biomarker.normal_range || 'N/A', margin + 4.0, yPosition)
+        yPosition += 0.15
+      }
+    }
+
+    // Add standard disclaimer (same as other reports)
+    if (yPosition > pageHeight - 1.0) {
+      pdf.addPage()
+      yPosition = margin
+    } else {
+      yPosition += 0.3
+    }
+
+    // Draw line above disclaimer
+    pdf.setDrawColor(229, 231, 235) // #e5e7eb
+    pdf.line(margin, yPosition, pageWidth - margin, yPosition)
+    yPosition += 0.2
+
+    // Add disclaimer with same styling as other reports
+    pdf.setFontSize(9)
+    pdf.setTextColor(239, 68, 68) // #ef4444 - same red as other reports
+    const disclaimerLines = [
+      'MEDICAL DISCLAIMER:',
+      'This report is generated by AI algorithms for research and screening purposes only.',
+      'Results should not be used as a substitute for professional medical diagnosis or treatment.',
+      'Always consult with qualified healthcare providers for medical decisions.'
+    ]
+
+    for (const line of disclaimerLines) {
+      pdf.text(line, margin, yPosition)
+      yPosition += 0.12
+    }
+
+    // Add footer with generation info
+    yPosition += 0.15
+    pdf.setFontSize(8)
+    pdf.setTextColor(156, 163, 175) // #9ca3af
+    pdf.text(`Generated by Medical AI Diagnostics Platform • ${new Date().toLocaleString()}`, margin, yPosition)
+
+    // Save the PDF
+    const fileName = `biomarker-report-${Date.now()}.pdf`
+    pdf.save(fileName)
+    console.log('PDF saved as:', fileName)
+
+  } catch (error) {
+    console.error('PDF generation failed:', error)
+    throw new Error('Failed to generate PDF report')
+  }
 }
 
 // Convert DICOM file to base64 image by extracting pixel data

@@ -1,15 +1,14 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { Activity, Zap, ChevronDown, ChevronUp } from 'lucide-react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { Activity, Zap, ChevronDown, ChevronUp, Download } from 'lucide-react'
 import { FileUpload } from '../../components/FileUpload'
-import { PredictionCard } from '../../components/PredictionCard'
 import { MetadataCard } from '../../components/MetadataCard'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { SingleBiomarkerChart } from '../../components/BiomarkerChart'
-import { GaugeChart, BIOMARKER_CONFIGS } from '../../components/GaugeChart'
 import { ImagePreviewCard } from '../../components/ImagePreviewCard'
+import BiomarkerResults from '../../components/BiomarkerResults'
 import { apiClient, BiomarkerResult, DicomMetadata, UploadProgress, BIOMARKERS } from '../../lib/api'
+import { generatePDFReport, generateBiomarkerPDFReport, chartToBase64, imageToBase64 } from '../../lib/pdf-export'
 
 export default function BiomarkersPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -20,15 +19,16 @@ export default function BiomarkersPage() {
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showBiomarkerList, setShowBiomarkerList] = useState(false)
+  const [exportingPDF, setExportingPDF] = useState(false)
 
   // Refs for chart capture
-  const gaugeChartRefs = React.useRef<(HTMLDivElement | null)[]>([])
+  const chartRefs = useRef<(HTMLDivElement | null)[]>([])
 
   // Group biomarkers by category for better organization
   const biomarkerCategories = {
     'Cardiovascular': [
-      'BP_OUT_CALC_AVG_DIASTOLIC_BP',
-      'BP_OUT_CALC_AVG_SYSTOLIC_BP',
+      // 'BP_OUT_CALC_AVG_DIASTOLIC_BP',
+      // 'BP_OUT_CALC_AVG_SYSTOLIC_BP',
       'Cholesterol Total',
       'HDL-Cholesterol',
       'LDL-Cholesterol Calc',
@@ -40,11 +40,11 @@ export default function BiomarkersPage() {
       'Insulin',
       'BMI'
     ],
-    'Hormonal': [
-      'Estradiol',
-      'Testosterone Total',
-      'Sex Hormone Binding Globulin'
-    ],
+    // 'Hormonal': [
+    //   'Estradiol',
+    //   'Testosterone Total',
+    //   'Sex Hormone Binding Globulin'
+    // ],
     'Hematological': [
       'Hemoglobin',
       'Hematocrit',
@@ -56,11 +56,7 @@ export default function BiomarkersPage() {
     ]
   }
 
-  useEffect(() => {
-    console.log(selectedBiomarkers)
-  }, [selectedBiomarkers])
-
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file)
     setPredictions([])
     setMetadata(null)
@@ -76,15 +72,15 @@ export default function BiomarkersPage() {
     if (isDicom) {
       extractMetadata(file)
     }
-  }
+  }, [])
 
-  const handleFileRemove = () => {
+  const handleFileRemove = useCallback(() => {
     setSelectedFile(null)
     setPredictions([])
     setMetadata(null)
     setError(null)
     setUploadProgress(null)
-  }
+  }, [])
 
   const extractMetadata = async (file: File) => {
     try {
@@ -95,21 +91,21 @@ export default function BiomarkersPage() {
     }
   }
 
-  const handleBiomarkerToggle = (biomarker: string) => {
+  const handleBiomarkerToggle = useCallback((biomarker: string) => {
     setSelectedBiomarkers(prev => 
       prev.includes(biomarker)
         ? prev.filter(b => b !== biomarker)
         : [...prev, biomarker]
     )
-  }
+  }, [])
 
-  const handleSelectAll = () => {
+  const handleSelectAll = useCallback(() => {
     setSelectedBiomarkers([...BIOMARKERS])
-  }
+  }, [])
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     setSelectedBiomarkers([])
-  }
+  }, [])
 
   const handleAnalyze = async () => {
     if (!selectedFile) return
@@ -136,6 +132,9 @@ export default function BiomarkersPage() {
       // Set all predictions from batch result
       setPredictions(result.predictions)
       
+      // Initialize chart refs array
+      chartRefs.current = new Array(result.predictions.length).fill(null)
+      
       // Log successful batch processing
       console.log(`Successfully processed ${result.processed_biomarkers}/${result.requested_biomarkers} biomarkers in ${result.total_processing_time.toFixed(2)}s`)
       
@@ -145,6 +144,130 @@ export default function BiomarkersPage() {
     } finally {
       setLoading(false)
       setUploadProgress(null)
+    }
+  }
+
+  const handleExportPDF = async () => {
+    if (!predictions.length || !selectedFile) return
+
+    setExportingPDF(true)
+    try {
+      // Capture gauge charts
+      console.log('Starting chart capture for', predictions.length, 'predictions')
+      console.log('Chart refs length:', chartRefs.current.length)
+      console.log('Chart refs content:', chartRefs.current.map((ref, i) => ({ index: i, exists: !!ref })))
+      
+      // Add a small delay to ensure charts are fully rendered
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Check that all refs are set before proceeding
+      const allRefsSet = chartRefs.current.every(ref => ref !== null)
+      console.log('All chart refs set:', allRefsSet)
+      
+      if (!allRefsSet) {
+        console.warn('Not all chart refs are set, waiting additional time...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+      
+      const gaugeCharts = await Promise.all(
+        chartRefs.current
+          .map(async (chartRef, originalIndex) => {
+            console.log(`Processing chart ${originalIndex}:`, { ref: !!chartRef, biomarker: predictions[originalIndex]?.biomarker_name })
+            if (!chartRef) {
+              console.log(`Chart ${originalIndex} ref is null`)
+              return null
+            }
+            
+            // Check if the element has content
+            if (chartRef.offsetWidth === 0 || chartRef.offsetHeight === 0) {
+              console.log(`Chart ${originalIndex} has no dimensions:`, chartRef.offsetWidth, 'x', chartRef.offsetHeight)
+              return null
+            }
+            
+            try {
+              const base64Image = await chartToBase64(chartRef)
+              console.log(`Chart ${originalIndex} captured successfully, size: ${base64Image.length}`)
+              return {
+                name: predictions[originalIndex]?.biomarker_name || `Biomarker ${originalIndex + 1}`,
+                image: base64Image
+              }
+            } catch (error) {
+              console.error(`Failed to capture chart ${originalIndex}:`, error)
+              return null
+            }
+          })
+      )
+
+      console.log('Raw gauge charts:', gaugeCharts)
+      
+      // Filter out failed captures
+      const validGaugeCharts = gaugeCharts.filter(chart => chart !== null) as Array<{ name: string; image: string }>
+      console.log('Valid gauge charts after filtering:', validGaugeCharts.length, validGaugeCharts.map(c => c.name))
+
+      // Convert uploaded image to base64 (handle DICOM files specially)
+      let imageBase64: string
+      const isDicom = selectedFile.name.toLowerCase().endsWith('.dcm') || 
+                     selectedFile.name.toLowerCase().endsWith('.dicom') ||
+                     selectedFile.type === 'application/dicom' ||
+                     selectedFile.type === 'application/x-dicom' ||
+                     selectedFile.type === 'application/dicom+json'
+      
+      if (isDicom) {
+        // For DICOM files, use the backend conversion service
+        console.log('Converting DICOM file to image...')
+        const formData = new FormData()
+        formData.append('file', selectedFile)
+        const response = await fetch('/api/dicom/image', {
+          method: 'POST',
+          body: formData
+        })
+        if (!response.ok) {
+          throw new Error(`DICOM processing failed: ${response.statusText}`)
+        }
+        const result = await response.json()
+        if (!result.success || !result.image_base64) {
+          throw new Error('Failed to extract image from DICOM file')
+        }
+        imageBase64 = result.image_base64
+        console.log('DICOM conversion successful, image length:', imageBase64.length)
+      } else {
+        // For regular image files, use direct conversion
+        imageBase64 = await imageToBase64(selectedFile)
+        console.log('Regular image conversion successful, image length:', imageBase64.length)
+      }
+
+      // Generate PDF report
+      console.log('Generating PDF with data:', {
+        analysisType: 'Biomarkers',
+        biomarkers: predictions,
+        image: imageBase64 ? `${imageBase64.substring(0, 50)}...` : 'undefined',
+        metadata: metadata || undefined,
+        patientInfo: {
+          date: new Date().toLocaleDateString()
+        },
+        chartData: {
+          gaugeCharts: validGaugeCharts
+        }
+      })
+      
+      await generateBiomarkerPDFReport({
+        analysisType: 'Biomarkers',
+        biomarkers: predictions,
+        image: imageBase64,
+        metadata: metadata || undefined,
+        patientInfo: {
+          date: new Date().toLocaleDateString()
+        },
+        chartData: {
+          gaugeCharts: validGaugeCharts
+        }
+      })
+
+    } catch (error) {
+      console.error('PDF export failed:', error)
+      setError('Failed to export PDF report. Please try again.')
+    } finally {
+      setExportingPDF(false)
     }
   }
 
@@ -227,8 +350,8 @@ export default function BiomarkersPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Upload and Analysis */}
+      <div className="space-y-8">
+        {/* Upload and Analysis Section */}
         <div className="space-y-6">
           <div className="medical-card p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -267,7 +390,8 @@ export default function BiomarkersPage() {
             {selectedFile && !loading && (
               <button
                 onClick={handleAnalyze}
-                className="w-full mt-4 medical-button py-3 rounded-md flex items-center justify-center space-x-2"
+                disabled={loading}
+                className="w-full mt-4 medical-button py-3 rounded-md flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Zap className="h-5 w-5" />
                 <span>
@@ -317,87 +441,56 @@ export default function BiomarkersPage() {
           </div>
         </div>
 
-        {/* Right Column - Results */}
+        {/* Results Section */}
         <div className="space-y-6">
-          {predictions.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Biomarker Results ({predictions.length})
-              </h3>
-              {predictions.map((prediction, index) => (
-                <PredictionCard
-                  key={index}
-                  title={prediction.biomarker_name}
-                  prediction={`${prediction.predicted_value}`}
-                  confidence={0.85} // Dummy confidence for demo
-                  timestamp={prediction.timestamp}
-                  processingTime={prediction.processing_time}
-                  variant="biomarker"
-                  unit={prediction.unit}
-                  normalRange={prediction.normal_range}
-                  imageFile={index === 0 ? (selectedFile || undefined) : undefined} // Only show image for first card
-                  biomarkerData={predictions}
-                  metadata={metadata || undefined}
-                  analysisType="Biomarkers"
-                />
-              ))}
-            </div>
-          )}
-
           {/* Image Preview Card */}
           {predictions.length > 0 && selectedFile && (
-          <ImagePreviewCard
-            imageFile={selectedFile}
-            analysisType="Biomarkers"
-            biomarkers={predictions}
-            metadata={metadata || undefined}
-            gaugeChartRefs={gaugeChartRefs.current.map((_, index) => ({
-              current: gaugeChartRefs.current[index]
-            }))}
-          />
-          )}
-
-          {/* Biomarker Charts */}
-          {predictions.length > 0 && (
-            <div className="medical-card p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                Biomarker Visualization
-              </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {predictions.map((prediction, index) => {
-                  const config = BIOMARKER_CONFIGS[prediction.biomarker_name]
-                  return (
-                    <div key={index} className="space-y-4">
-                      {/* Gauge Chart */}
-                      {config && (
-                        <div ref={(el) => { gaugeChartRefs.current[index] = el }}>
-                          <GaugeChart
-                            value={prediction.predicted_value}
-                            config={config}
-                          />
-                        </div>
-                      )}
-                      
-                      {/* Horizontal Bar Chart */}
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                        <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                          {prediction.biomarker_name}
-                        </h4>
-                        <SingleBiomarkerChart
-                          biomarker={prediction}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+            <ImagePreviewCard
+              imageFile={selectedFile}
+              analysisType="Biomarkers"
+              biomarkers={predictions}
+              metadata={metadata || undefined}
+              report={false}
+            />
           )}
 
           {metadata && (
             <MetadataCard metadata={metadata.metadata} />
           )}
+          
+          {predictions.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Biomarker Results ({predictions.length})
+                </h3>
+                <button
+                  onClick={handleExportPDF}
+                  disabled={exportingPDF || !selectedFile}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {exportingPDF ? (
+                    <>
+                      <LoadingSpinner size="sm" />
+                      <span>Generating PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      <span>Export PDF Report</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Biomarker Results Component */}
+              <BiomarkerResults
+                results={predictions}
+                chartRefs={chartRefs}
+              />
+            </div>
+          )}
+
 
           {predictions.length === 0 && !metadata && (
             <div className="medical-card p-8 text-center">

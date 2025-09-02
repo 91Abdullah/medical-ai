@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { CheckCircle, AlertCircle, Clock, TrendingUp, Activity, Download, Image as ImageIcon, Eye } from 'lucide-react'
-import { generatePDFReport, imageToBase64 } from '../lib/pdf-export'
+import { generatePDFReport, generateBiomarkerPDFReport, imageToBase64 } from '../lib/pdf-export'
 import { PredictionResult, BiomarkerResult, DicomMetadata, apiClient } from '../lib/api'
 
 type DicomMetadataInner = {
@@ -199,7 +199,12 @@ export function PredictionCard({
         image: imageBase64
       }
 
-      generatePDFReport(reportData)
+      // Use biomarker-specific PDF function if biomarkers are present
+      if (biomarkerData && biomarkerData.length > 0) {
+        generateBiomarkerPDFReport(reportData)
+      } else {
+        generatePDFReport(reportData)
+      }
     } catch (error) {
       console.error('Failed to export PDF:', error)
       if (error instanceof Error && error.message.includes('DICOM')) {
@@ -221,7 +226,12 @@ export function PredictionCard({
           } : undefined),
           image: undefined
         }
-        generatePDFReport(reportData)
+        // Use biomarker-specific PDF function if biomarkers are present (retry without image)
+        if (biomarkerData && biomarkerData.length > 0) {
+          generateBiomarkerPDFReport(reportData)
+        } else {
+          generatePDFReport(reportData)
+        }
       } else {
         alert('Failed to export PDF report. Please try again.')
       }

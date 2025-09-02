@@ -66,11 +66,11 @@ export type ImageType = 'oct' | 'fundus'
 export const BIOMARKERS = [
   'Age',
   'BMI',
-  'BP_OUT_CALC_AVG_DIASTOLIC_BP',
-  'BP_OUT_CALC_AVG_SYSTOLIC_BP',
+  // 'BP_OUT_CALC_AVG_DIASTOLIC_BP',
+  // 'BP_OUT_CALC_AVG_SYSTOLIC_BP',
   'Cholesterol Total',
   'Creatinine',
-  'Estradiol',
+  // 'Estradiol',
   'Glucose',
   'HbA1C %',
   'HDL-Cholesterol',
@@ -79,8 +79,8 @@ export const BIOMARKERS = [
   'Insulin',
   'LDL-Cholesterol Calc',
   'Red Blood Cell',
-  'Sex Hormone Binding Globulin',
-  'Testosterone Total',
+  // 'Sex Hormone Binding Globulin',
+  // 'Testosterone Total',
   'Triglyceride'
 ] as const
 
