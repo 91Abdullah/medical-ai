@@ -3,9 +3,10 @@
 import React, { useState } from 'react'
 import { Eye, FileImage, Zap } from 'lucide-react'
 import { FileUpload } from '../../components/FileUpload'
-import { PredictionCard } from '../../components/PredictionCard'
 import { MetadataCard } from '../../components/MetadataCard'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { SeverityChart } from '../../components/SeverityChart'
+import { ImagePreviewCard } from '../../components/ImagePreviewCard'
 import { apiClient, PredictionResult, DicomMetadata, UploadProgress } from '../../lib/api'
 
 type ImageType = 'oct' | 'fundus'
@@ -18,6 +19,8 @@ export default function AmdPage() {
   const [metadata, setMetadata] = useState<DicomMetadata | null>(null)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const severityChartRef = React.useRef<HTMLDivElement>(null)
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -223,18 +226,49 @@ export default function AmdPage() {
         {/* Right Column - Results */}
         <div className="space-y-6">
           {prediction && (
-            <PredictionCard
-              title={`${tabConfig[activeTab].title} Result`}
-              prediction={prediction.prediction}
-              confidence={prediction.confidence}
-              timestamp={prediction.timestamp}
-              processingTime={prediction.processing_time}
-              imageFile={selectedFile || undefined}
-              predictionData={prediction}
-              metadata={metadata?.metadata || undefined}
-              analysisType="AMD"
-            />
+            <div className="space-y-4">
+              <div 
+                ref={severityChartRef}
+                className="chart-container" 
+                style={{ maxWidth: '700px', margin: '0 auto' }}
+              >
+                <SeverityChart
+                  prediction={prediction}
+                  className="w-full"
+                />
+              </div>
+              
+              {/* Additional details card */}
+              <div className="medical-card p-4">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Analysis Details
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Processing Time:</span>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {prediction.processing_time.toFixed(2)}s
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Timestamp:</span>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {new Date(prediction.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
+
+          {/* Image Preview and Export */}
+          <ImagePreviewCard
+            imageFile={selectedFile}
+            prediction={prediction}
+            metadata={metadata}
+            analysisType="AMD"
+            severityChartRef={severityChartRef}
+          />
 
           {metadata && (
             <MetadataCard metadata={metadata.metadata} />

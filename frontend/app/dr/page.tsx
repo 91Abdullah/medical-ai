@@ -8,20 +8,20 @@ import { DrOctTab } from './oct'
 type TabType = 'fundus' | 'oct'
 
 export default function DrPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('fundus')
+  const [activeTab, setActiveTab] = useState<TabType>('oct')
 
   const tabs = [
-    {
-      id: 'fundus' as const,
-      name: 'Fundus Analysis',
-      icon: Eye,
-      description: 'DR severity grading from fundus images'
-    },
     {
       id: 'oct' as const,
       name: 'OCT Analysis',
       icon: Camera,
       description: 'OCT-based DR analysis'
+    },
+    {
+      id: 'fundus' as const,
+      name: 'Fundus Analysis',
+      icon: Eye,
+      description: 'DR severity grading from fundus images'
     }
   ]
 

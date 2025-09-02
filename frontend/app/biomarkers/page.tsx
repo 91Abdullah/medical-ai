@@ -6,6 +6,9 @@ import { FileUpload } from '../../components/FileUpload'
 import { PredictionCard } from '../../components/PredictionCard'
 import { MetadataCard } from '../../components/MetadataCard'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { SingleBiomarkerChart } from '../../components/BiomarkerChart'
+import { GaugeChart, BIOMARKER_CONFIGS } from '../../components/GaugeChart'
+import { ImagePreviewCard } from '../../components/ImagePreviewCard'
 import { apiClient, BiomarkerResult, DicomMetadata, UploadProgress, BIOMARKERS } from '../../lib/api'
 
 export default function BiomarkersPage() {
@@ -17,6 +20,9 @@ export default function BiomarkersPage() {
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showBiomarkerList, setShowBiomarkerList] = useState(false)
+
+  // Refs for chart capture
+  const gaugeChartRefs = React.useRef<(HTMLDivElement | null)[]>([])
 
   // Group biomarkers by category for better organization
   const biomarkerCategories = {
@@ -335,6 +341,57 @@ export default function BiomarkersPage() {
                   analysisType="Biomarkers"
                 />
               ))}
+            </div>
+          )}
+
+          {/* Image Preview Card */}
+          {predictions.length > 0 && selectedFile && (
+          <ImagePreviewCard
+            imageFile={selectedFile}
+            analysisType="Biomarkers"
+            biomarkers={predictions}
+            metadata={metadata || undefined}
+            gaugeChartRefs={gaugeChartRefs.current.map((_, index) => ({
+              current: gaugeChartRefs.current[index]
+            }))}
+          />
+          )}
+
+          {/* Biomarker Charts */}
+          {predictions.length > 0 && (
+            <div className="medical-card p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                Biomarker Visualization
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {predictions.map((prediction, index) => {
+                  const config = BIOMARKER_CONFIGS[prediction.biomarker_name]
+                  return (
+                    <div key={index} className="space-y-4">
+                      {/* Gauge Chart */}
+                      {config && (
+                        <div ref={(el) => { gaugeChartRefs.current[index] = el }}>
+                          <GaugeChart
+                            value={prediction.predicted_value}
+                            config={config}
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Horizontal Bar Chart */}
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                        <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+                          {prediction.biomarker_name}
+                        </h4>
+                        <SingleBiomarkerChart
+                          biomarker={prediction}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 

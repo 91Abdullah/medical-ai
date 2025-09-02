@@ -6,6 +6,8 @@ import { FileUpload } from '../../components/FileUpload'
 import { PredictionCard } from '../../components/PredictionCard'
 import { MetadataCard } from '../../components/MetadataCard'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { SeverityChart } from '../../components/SeverityChart'
+import { ImagePreviewCard } from '../../components/ImagePreviewCard'
 import { apiClient, PredictionResult, DicomMetadata, UploadProgress } from '../../lib/api'
 
 export function DrFundusTab() {
@@ -15,6 +17,8 @@ export function DrFundusTab() {
   const [metadata, setMetadata] = useState<DicomMetadata | null>(null)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const severityChartRef = React.useRef<HTMLDivElement>(null)
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -167,19 +171,45 @@ export function DrFundusTab() {
       {/* Right Column - Results */}
       <div className="space-y-6">
         {prediction && (
-          <PredictionCard
-            title="DR Severity Classification"
-            prediction={prediction.prediction}
-            confidence={prediction.confidence}
-            timestamp={prediction.timestamp}
-            processingTime={prediction.processing_time}
-            className="border-l-4 border-red-500"
-            imageFile={selectedFile || undefined}
-            predictionData={prediction}
-            metadata={metadata || undefined}
-            analysisType="DR"
-          />
+          <div className="space-y-4">
+            <div ref={severityChartRef}>
+              <SeverityChart
+                prediction={prediction}
+                className="w-full"
+              />
+            </div>
+            
+            {/* DR-specific severity explanation */}
+            <div className="medical-card p-4">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                DR Severity Levels
+              </h4>
+              <div className="grid grid-cols-1 gap-2 text-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span>No DR - Healthy retina</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <span>Early pathology - Mild DR signs</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span>Advanced pathology - Severe DR</span>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
+
+        {/* Image Preview and Export */}
+        <ImagePreviewCard
+          imageFile={selectedFile}
+          prediction={prediction}
+          metadata={metadata}
+          analysisType="DR"
+          severityChartRef={severityChartRef}
+        />
 
         {metadata && (
           <MetadataCard metadata={metadata.metadata} />

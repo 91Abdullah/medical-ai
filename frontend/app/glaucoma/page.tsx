@@ -6,6 +6,8 @@ import { FileUpload } from '../../components/FileUpload'
 import { PredictionCard } from '../../components/PredictionCard'
 import { MetadataCard } from '../../components/MetadataCard'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { SeverityChart } from '../../components/SeverityChart'
+import { ImagePreviewCard } from '../../components/ImagePreviewCard'
 import { apiClient, PredictionResult, DicomMetadata, UploadProgress } from '../../lib/api'
 
 export default function GlaucomaPage() {
@@ -15,6 +17,8 @@ export default function GlaucomaPage() {
   const [metadata, setMetadata] = useState<DicomMetadata | null>(null)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const severityChartRef = React.useRef<HTMLDivElement>(null)
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -211,19 +215,37 @@ export default function GlaucomaPage() {
 
         {/* Right Column - Results */}
         <div className="space-y-6">
-          {prediction && (
-            <PredictionCard
-              title="Glaucoma Analysis Result"
-              prediction={prediction.prediction}
-              confidence={prediction.confidence}
-              timestamp={prediction.timestamp}
-              processingTime={prediction.processing_time}
-              imageFile={selectedFile || undefined}
-              predictionData={prediction}
-              metadata={metadata || undefined}
-              analysisType="Glaucoma"
-            />
-          )}
+          {prediction && <>
+            <div ref={severityChartRef} className="space-y-4">
+                <SeverityChart
+                  prediction={prediction}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-4">{/* Glaucoma-specific information */}
+                <div className="medical-card p-4">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    Glaucoma Risk Assessment
+                  </h4>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p>
+                      This analysis evaluates optic disc morphology and retinal nerve fiber layer 
+                      characteristics to assess glaucoma risk. Higher risk levels indicate the need 
+                      for further clinical evaluation.
+                    </p>
+                  </div>
+                </div>
+              </div>
+          </>}
+
+          {/* Image Preview and Export */}
+          <ImagePreviewCard
+            imageFile={selectedFile}
+            prediction={prediction}
+            metadata={metadata}
+            analysisType="Glaucoma"
+            severityChartRef={severityChartRef}
+          />
 
           {metadata && (
             <MetadataCard metadata={metadata.metadata} />

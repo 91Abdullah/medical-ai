@@ -4,6 +4,8 @@ export interface PredictionResult {
   confidence: number
   timestamp: string
   processing_time: number
+  classes?: string[] // Dynamic classes from model
+  class_probabilities?: Record<string, number> // Probabilities for each class
 }
 
 export interface BiomarkerResult {

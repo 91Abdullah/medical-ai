@@ -7,6 +7,8 @@ import { PredictionCard } from '../../components/PredictionCard'
 import { MetadataCard } from '../../components/MetadataCard'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { apiClient, PredictionResult, DicomMetadata, UploadProgress } from '../../lib/api'
+import { SeverityChart } from '@/components/SeverityChart'
+import { ImagePreviewCard } from '@/components/ImagePreviewCard'
 
 export function DrOctTab() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -15,6 +17,8 @@ export function DrOctTab() {
   const [metadata, setMetadata] = useState<DicomMetadata | null>(null)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const severityChartRef = React.useRef<HTMLDivElement>(null)
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file)
@@ -163,19 +167,45 @@ export function DrOctTab() {
       {/* Right Column - Results */}
       <div className="space-y-6">
         {prediction && (
-          <PredictionCard
-            title="DR Classification"
-            prediction={prediction.prediction}
-            confidence={prediction.confidence}
-            timestamp={prediction.timestamp}
-            processingTime={prediction.processing_time}
-            className="border-l-4 border-red-500"
-            imageFile={selectedFile || undefined}
-            predictionData={prediction}
-            metadata={metadata || undefined}
-            analysisType="DR"
-          />
+          <div className="space-y-4">
+            <div ref={severityChartRef}>
+              <SeverityChart
+                prediction={prediction}
+                className="w-full"
+              />
+            </div>
+            
+            {/* Additional details card */}
+            <div className="medical-card p-4">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                Analysis Details
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Processing Time:</span>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {prediction.processing_time.toFixed(2)}s
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">Timestamp:</span>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {new Date(prediction.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
+
+        {/* Image Preview and Export */}
+        <ImagePreviewCard
+          imageFile={selectedFile}
+          prediction={prediction}
+          metadata={metadata}
+          analysisType="Glaucoma"
+          severityChartRef={severityChartRef}
+        />  
 
         {metadata && (
           <MetadataCard metadata={metadata.metadata} />
@@ -188,7 +218,7 @@ export function DrOctTab() {
               No Analysis Yet
             </h3>
             <p className="text-gray-500 dark:text-gray-400">
-              Upload an oct image to see DR classfication and metadata here
+              Upload an image to see analysis results and metadata here
             </p>
           </div>
         )}
