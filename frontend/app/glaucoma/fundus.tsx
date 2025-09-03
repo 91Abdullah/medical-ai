@@ -150,12 +150,8 @@ export function GlaucomaFundusTab() {
                 <span className="text-sm">No Glaucoma - Healthy optic disc</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm">Early pathology - Mild glaucoma signs</span>
-              </div>
-              <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm">Advanced pathology - Severe glaucoma</span>
+                <span className="text-sm">Glaucoma Suspected - Glaucoma signs</span>
               </div>
             </div>
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mt-4">
@@ -171,33 +167,12 @@ export function GlaucomaFundusTab() {
       {/* Right Column - Results */}
       <div className="space-y-6">
         {prediction && (
-          <div className="space-y-4">
+          <div className="space-y-4 medical-card">
             <div ref={severityChartRef}>
               <SeverityChart
                 prediction={prediction}
                 className="w-full"
               />
-            </div>
-
-            {/* Glaucoma-specific severity explanation */}
-            <div className="medical-card p-4">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                Glaucoma Severity Levels
-              </h4>
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span>No Glaucoma - Healthy optic disc</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span>Early pathology - Mild glaucoma signs</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span>Advanced pathology - Severe glaucoma</span>
-                </div>
-              </div>
             </div>
           </div>
         )}

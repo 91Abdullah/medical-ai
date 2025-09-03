@@ -63,8 +63,8 @@ def predict_amd_oct():
                     image = image.convert('RGB')
             
             # Preprocess image
-            input_tensor = preprocessor.preprocess_oct(image)
-            
+            input_tensor = preprocessor.preprocess_oct_amd(image)
+
             # Get model and make prediction
             model_manager = get_model_manager()
             amd_model = model_manager.get_amd_oct_model()

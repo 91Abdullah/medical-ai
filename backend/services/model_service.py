@@ -494,33 +494,26 @@ class GlaucomaOCTModel(BaseModel):
     
     def __init__(self, model_path: str, device: str = 'cpu'):
         super().__init__(model_path, device)
-        self.classes = ['Healthy', 'Glaucoma']
+        self.classes = ['No Glaucoma', 'Glaucoma Suspected']
         self.transform = None
+
+    def to_grayscale_first_t(self, t: torch.Tensor) -> torch.Tensor:
+        """Ensure shape [1,H,W]; if C>1, average to grayscale."""
+        if t.ndim == 2:
+            t = t.unsqueeze(0)                     # [1,H,W]
+        elif t.ndim == 3 and t.shape[0] > 1:
+            t = t.mean(dim=0, keepdim=True)        # [1,H,W]
+        return t
         
     def load_model(self) -> None:
         """Load Glaucoma OCT PyTorch model (.pt)."""
         try:
-            from torchvision import transforms
-            from torchvision.models import densenet121
-            import torch.nn as nn
+            from monai.networks.nets import densenet121
             
-            # Load the DenseNet121 model for OCT classification
-            self.model = densenet121(pretrained=False)
-            # Modify for single channel input and binary classification
-            self.model.features[0] = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-            self.model.classifier = nn.Linear(self.model.classifier.in_features, 1)
-            
-            state = torch.load(self.model_path, map_location=self.device)
-            self.model.load_state_dict(state)
+            self.model = densenet121(spatial_dims=2, in_channels=1, out_channels=1).to(self.device)
+            self.model.load_state_dict(torch.load(self.model_path, map_location=self.device))
             self.model.eval()
-            
-            # Define preprocessing transforms
-            self.transform = transforms.Compose([
-                transforms.Resize((256, 256)),  # DenseNet standard size
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485], std=[0.229])  # Single channel normalization
-            ])
-            
+
             self.is_loaded = True
             logger.info(f"Glaucoma OCT model loaded successfully from {self.model_path}")
             
@@ -532,52 +525,32 @@ class GlaucomaOCTModel(BaseModel):
     
     def predict(self, input_data: torch.Tensor) -> Dict[str, Any]:
         """Predict glaucoma from OCT image."""
+
+        THRESHOLD = 0.92  # your chosen threshold
+
         try:
             if not self.is_loaded:
                 self.load_model()
             
-            # Ensure input is on correct device
-            input_data = self._to_device(input_data)
-            
-            # Convert to grayscale if needed
-            if input_data.shape[1] == 3:  # RGB to grayscale
-                input_data = input_data.mean(dim=1, keepdim=True)
-            elif input_data.shape[1] == 1:  # Already grayscale
-                pass
-            else:
-                raise ValueError(f"Unexpected input channels: {input_data.shape[1]}")
-            
-            # Apply preprocessing
-            if self.transform:
-                # Convert tensor back to PIL for torchvision transforms
-                from PIL import Image
-                import torchvision.transforms.functional as TF
-                
-                # Convert tensor to PIL Image
-                if input_data.shape[1] == 1:
-                    img = TF.to_pil_image(input_data.squeeze(0).cpu())
-                else:
-                    img = TF.to_pil_image(input_data.squeeze(0).cpu())
-                
-                # Apply transforms
-                img = self.transform(img)
-                input_data = img.unsqueeze(0).to(self.device)
-            
             with torch.no_grad():
-                outputs = self.model(input_data)
-                probabilities = torch.sigmoid(outputs).squeeze()
+                # input_data is already preprocessed tensor [1, 1, H, W]
+                # Apply grayscale conversion if needed
+                t = self.to_grayscale_first_t(input_data.squeeze(0))  # Remove batch dim, ensure [1, H, W]
+                x = t.unsqueeze(0).to(self.device)  # Add batch dim back: [1, 1, H, W]
                 
+                prob = torch.sigmoid(self.model(x)).item()
+
                 # Convert to binary prediction
-                pred_idx = (probabilities >= 0.92).long().item()  # Using threshold from instructions
-                confidence = probabilities.item() if pred_idx == 1 else (1 - probabilities.item())
-                
+                pred = int(prob >= THRESHOLD)
+                confidence = prob if pred == 1 else (1 - prob)
+
                 return {
-                    'prediction': self.classes[pred_idx],
+                    'prediction': self.classes[pred],
                     'confidence': float(confidence),
-                    'probability': float(probabilities.item()),
+                    'probability': float(prob),
                     'class_probabilities': {
-                        'Healthy': float(1 - probabilities.item()),
-                        'Glaucoma': float(probabilities.item())
+                        'No Glaucoma': float(1 - prob),
+                        'Glaucoma Suspected': float(prob)
                     },
                     'classes': self.classes
                 }

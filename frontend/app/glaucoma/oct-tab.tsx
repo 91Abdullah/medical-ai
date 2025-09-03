@@ -81,36 +81,6 @@ export function GlaucomaOCTTab() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Left Column - Upload and Analysis */}
       <div className="space-y-6">
-        {/* Model Information */}
-        <div className="medical-card p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Glaucoma OCT Analysis Model
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3">
-              <Activity className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">DenseNet121 Architecture</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Optimized for OCT images</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Zap className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">92% Threshold</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">High precision detection</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Eye className="h-5 w-5 text-purple-500" />
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">Grayscale Processing</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Single-channel OCT analysis</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Upload Section */}
         <div className="medical-card p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -177,11 +147,11 @@ export function GlaucomaOCTTab() {
             <div className="grid grid-cols-1 gap-2">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm">No Glaucoma - Healthy retina</span>
+                <span className="text-sm">No Glaucoma - Healthy optic disc</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm">Glaucoma detected - Pathology present</span>
+                <span className="text-sm">Glaucoma Suspected - Glaucoma signs</span>
               </div>
             </div>
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mt-4">

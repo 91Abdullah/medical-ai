@@ -20,9 +20,9 @@ export function SeverityChart({ prediction, className = '' }: SeverityChartProps
     const colorFor = (label: string, idx: number) => {
         const l = label.toLowerCase()
         if (/(no|normal)/.test(l)) return '#22c55e' // green
-        if (/(low|mild|suspected)/.test(l)) return '#eab308' // yellow
+        if (/(low|mild)/.test(l)) return '#eab308' // yellow
         if (/(medium|moderate)/.test(l)) return '#f97316' // orange
-        if (/(high|severe|dr|present)/.test(l)) return '#ef4444' // red
+        if (/(high|severe|dr|present|suspected|glaucoma)/.test(l)) return '#ef4444' // red
         // fallback palette
         const fallback = ['#22c55e', '#eab308', '#f97316', '#ef4444', '#06b6d4', '#8b5cf6']
         return fallback[idx % fallback.length]

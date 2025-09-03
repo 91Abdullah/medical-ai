@@ -22,6 +22,13 @@ class ImagePreprocessor:
             transforms.Normalize(mean=[0.485], std=[0.229])  # Single channel normalization
         ])
 
+        self.oct_amd_transforms = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.Lambda(lambda im: im.convert('RGB')),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485,0.456,0.406], [0.229,0.224,0.225]),
+        ])
+
         self.fundus_amd_transforms = transforms.Compose([
             transforms.Resize((256, 256)),
             transforms.ToTensor(),
@@ -67,7 +74,7 @@ class ImagePreprocessor:
             logger.error(f"Error loading image from bytes: {e}")
             raise
     
-    def preprocess_oct(self, image: Union[str, Image.Image, np.ndarray]) -> torch.Tensor:
+    def preprocess_oct_amd(self, image: Union[str, Image.Image, np.ndarray]) -> torch.Tensor:
         """Preprocess OCT image for AMD classification."""
         try:
             if isinstance(image, str):
@@ -76,7 +83,7 @@ class ImagePreprocessor:
                 image = Image.fromarray(image)
             
             # Apply OCT-specific preprocessing
-            processed = self.oct_transforms(image)
+            processed = self.oct_amd_transforms(image)
             
             # Add batch dimension
             return processed.unsqueeze(0)
