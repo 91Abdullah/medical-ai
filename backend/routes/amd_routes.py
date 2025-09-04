@@ -138,7 +138,7 @@ def predict_amd_fundus():
         
         try:
             # Process image based on file type
-            if file.content_type == 'application/dicom':
+            if dicom_processor.is_dicom_file(temp_path):
                 # Handle DICOM file
                 dicom_data = dicom_processor.read_dicom_file(temp_path)
                 image = dicom_processor.dicom_to_pil_image(dicom_data)
