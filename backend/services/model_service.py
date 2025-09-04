@@ -60,21 +60,23 @@ class DROCTModel(BaseModel):
         if not self.is_loaded:
             self.load_model()
 
-        # Ensure batch and float32
-        x = np.asarray(input_data, dtype="float32")
-        if x.ndim == 3:  # (H, W, C) -> (1, H, W, C)
-            x = x[None, ...]
+        # # Ensure batch and float32
+        # x = np.asarray(input_data, dtype="float32")
+        # if x.ndim == 3:  # (H, W, C) -> (1, H, W, C)
+        #     x = x[None, ...]
 
-        # Align channel count with model input (tile grayscale if model expects RGB)
-        expected_c = int(self.model.inputs[0].shape[-1]) if self.model.inputs[0].shape[-1] is not None else x.shape[-1]
-        if x.shape[-1] == 1 and expected_c == 3:
-            x = np.repeat(x, 3, axis=-1)
-        elif x.shape[-1] == 3 and expected_c == 1:
-            x = x.mean(axis=-1, keepdims=True)
+        # # Align channel count with model input (tile grayscale if model expects RGB)
+        # expected_c = int(self.model.inputs[0].shape[-1]) if self.model.inputs[0].shape[-1] is not None else x.shape[-1]
+        # if x.shape[-1] == 1 and expected_c == 3:
+        #     x = np.repeat(x, 3, axis=-1)
+        # elif x.shape[-1] == 3 and expected_c == 1:
+        #     x = x.mean(axis=-1, keepdims=True)
 
         # Inference
-        y = self.model(x, training=False)
+        y = self.model(input_data)
         y = y.numpy().squeeze()
+
+        print(y)
 
         # Map outputs to probabilities for ['DR', 'Normal']
         if y.ndim == 0:                # scalar sigmoid
@@ -526,17 +528,23 @@ class GlaucomaOCTModel(BaseModel):
         """Predict glaucoma from OCT image."""
 
         THRESHOLD = 0.92  # your chosen threshold
+        from monai.transforms import Compose, EnsureChannelFirst, Resize, ScaleIntensity, EnsureType
 
         try:
             if not self.is_loaded:
                 self.load_model()
             
             with torch.no_grad():
+                infer_tf = Compose([
+                    ScaleIntensity(minv=0.0, maxv=1.0),                     # <- key line: returns torch.Tensor/MetaTensor
+                ])
+
                 # input_data is already preprocessed tensor [1, 1, H, W]
                 # Apply grayscale conversion if needed
-                t = self.to_grayscale_first_t(input_data.squeeze(0))  # Remove batch dim, ensure [1, H, W]
+                t = infer_tf(input_data)
+                t = self.to_grayscale_first_t(t.squeeze(0))  # Remove batch dim, ensure [1, H, W]
                 x = t.unsqueeze(0).to(self.device)  # Add batch dim back: [1, 1, H, W]
-                
+
                 prob = torch.sigmoid(self.model(x)).item()
 
                 # Convert to binary prediction

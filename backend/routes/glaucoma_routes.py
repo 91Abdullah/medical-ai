@@ -157,7 +157,7 @@ def predict_glaucoma_oct():
                     image = image.convert('L')  # Convert to grayscale for OCT
             
             # Preprocess image for OCT model
-            input_tensor = preprocessor.preprocess_oct(image)
+            input_tensor = preprocessor.preprocess_glaucoma_oct(image)
             
             # Get model and make prediction
             model_manager = get_model_manager()

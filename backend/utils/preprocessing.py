@@ -22,6 +22,11 @@ class ImagePreprocessor:
             transforms.Normalize(mean=[0.485], std=[0.229])  # Single channel normalization
         ])
 
+        self.oct_glaucoma_transforms = transforms.Compose([
+            transforms.Resize((256, 256)),
+            transforms.ToTensor(),
+        ])
+
         self.oct_amd_transforms = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.Lambda(lambda im: im.convert('RGB')),
@@ -125,6 +130,32 @@ class ImagePreprocessor:
             return np.expand_dims(arr, axis=0)               # (1, H, W, 3)
         except Exception as e:
             logger.error(f"Error preprocessing OCT Keras image: {e}")
+            raise   
+
+    def preprocess_glaucoma_oct(self, image: Union[str, Image.Image, np.ndarray], size=(256, 256)) -> torch.Tensor:
+        """Preprocess OCT image for PyTorch models (grayscale)."""
+        try:
+            if isinstance(image, str):
+                image = self.load_image(image)
+            elif isinstance(image, np.ndarray):
+                image = Image.fromarray(image)
+            
+            # Convert to grayscale for OCT images
+            if image.mode != 'L':
+                image = image.convert('L')
+            
+            # Apply OCT-specific preprocessing
+            processed = self.oct_glaucoma_transforms(image)
+            
+            # Add batch dimension
+            return processed.unsqueeze(0)
+            
+        except Exception as e:
+            logger.error(f"Error preprocessing OCT image: {e}")
+            raise
+
+        except Exception as e:
+            logger.error(f"Error preprocessing OCT image: {e}")
             raise        
 
     def preprocess_oct(self, image: Union[str, Image.Image, np.ndarray], size=(256, 256)) -> torch.Tensor:
