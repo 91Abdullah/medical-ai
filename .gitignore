@@ -249,3 +249,6 @@ Desktop.ini
 backend/models/
 
 .github/
+
+# Add ipynb files
+*.ipynb

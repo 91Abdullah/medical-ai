@@ -59,8 +59,6 @@ def predict_glaucoma_fundus():
             else:
                 # Handle regular image file
                 image = Image.open(temp_path)
-                if image.mode != 'RGB':
-                    image = image.convert('RGB')
             
             # Preprocess image
             input_tensor = preprocessor.preprocess_keras(image)
@@ -153,8 +151,6 @@ def predict_glaucoma_oct():
             else:
                 # Handle regular image file
                 image = Image.open(temp_path)
-                if image.mode not in ['L', 'RGB', 'RGBA']:
-                    image = image.convert('L')  # Convert to grayscale for OCT
             
             # Preprocess image for OCT model
             input_tensor = preprocessor.preprocess_glaucoma_oct(image)

@@ -118,7 +118,7 @@ class ImagePreprocessor:
         """Preprocess OCT image for Keras models."""
         try:
             if isinstance(image, (str, os.PathLike, io.BytesIO)):
-                im = k_load(image, target_size=size, color_mode="rgb")
+                im = k_load(image, target_size=size)
             elif isinstance(image, Image.Image):
                 im = image.convert("RGB").resize(size, Image.BILINEAR)
             elif isinstance(image, np.ndarray):
@@ -126,7 +126,8 @@ class ImagePreprocessor:
             else:
                 raise TypeError(f"Unsupported type: {type(image)}")
 
-            arr = img_to_array(im, dtype="float32") / 255.0  # (H, W, 3) float32
+            arr = img_to_array(im)  # (H, W, 3) float32
+            print(arr.shape)
             return np.expand_dims(arr, axis=0)               # (1, H, W, 3)
         except Exception as e:
             logger.error(f"Error preprocessing OCT Keras image: {e}")
@@ -260,7 +261,7 @@ class ImagePreprocessor:
             else:
                 raise TypeError(f"Unsupported type: {type(image)}")
 
-            arr = img_to_array(im, dtype="float32") / 255.0  # (H, W, 3) float32
+            arr = img_to_array(im) / 255.0  # (H, W, 3) float32
             return np.expand_dims(arr, axis=0)               # (1, H, W, 3)
         except Exception as e:
             logger.error(f"Error preprocessing Keras image: {e}")
