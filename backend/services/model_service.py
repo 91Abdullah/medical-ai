@@ -42,7 +42,7 @@ class DROCTModel(BaseModel):
     def __init__(self, model_path: str, device: str = 'cpu'):
         super().__init__(model_path, device)
         # This is a binary model p > 0.5 == Normal else DR
-        self.classes = ['DR', 'Normal']
+        self.classes = ['DR Signs', 'No DR']
 
     def load_model(self):
         """Load DR OCT Keras model (.h5 or SavedModel)"""
@@ -122,8 +122,7 @@ class DRFundusModel(BaseModel):
         try:
             if not self.is_loaded:
                 self.load_model()
-            
-            print(input_data.shape)
+        
             input_data = self._to_device(input_data)
             with torch.no_grad():
                 outputs = self.model(input_data)

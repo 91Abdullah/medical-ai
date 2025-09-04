@@ -178,27 +178,6 @@ export function DrFundusTab() {
                 className="w-full"
               />
             </div>
-            
-            {/* DR-specific severity explanation */}
-            <div className="medical-card p-4">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                DR Severity Levels
-              </h4>
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span>No DR - Healthy retina</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span>Early pathology - Mild DR signs</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span>Advanced pathology - Severe DR</span>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 

@@ -1,16 +1,16 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Eye, Camera, Zap } from 'lucide-react'
+import { FileImage, Zap, Activity } from 'lucide-react'
 import { FileUpload } from '../../components/FileUpload'
 import { PredictionCard } from '../../components/PredictionCard'
 import { MetadataCard } from '../../components/MetadataCard'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { SeverityChart } from '../../components/SeverityChart'
+import { ImagePreviewCard } from '../../components/ImagePreviewCard'
 import { apiClient, PredictionResult, DicomMetadata, UploadProgress } from '../../lib/api'
-import { SeverityChart } from '@/components/SeverityChart'
-import { ImagePreviewCard } from '@/components/ImagePreviewCard'
 
-export function DrOctTab() {
+export function AmdFundusTab() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [prediction, setPrediction] = useState<PredictionResult | null>(null)
@@ -25,14 +25,14 @@ export function DrOctTab() {
     setPrediction(null)
     setMetadata(null)
     setError(null)
-    
+
     // Extract DICOM metadata if it's a DICOM file
-    const isDicom = file.name.toLowerCase().endsWith('.dcm') || 
+    const isDicom = file.name.toLowerCase().endsWith('.dcm') ||
                    file.name.toLowerCase().endsWith('.dicom') ||
                    file.type === 'application/dicom' ||
                    file.type === 'application/x-dicom' ||
                    file.type === 'application/dicom+json'
-    
+
     if (isDicom) {
       extractMetadata(file)
     }
@@ -67,7 +67,7 @@ export function DrOctTab() {
         setUploadProgress(progress)
       }
 
-      const result = await apiClient.predictDrOct(selectedFile, onProgress)
+      const result = await apiClient.predictAmdFundus(selectedFile, onProgress)
       setPrediction(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.')
@@ -81,9 +81,10 @@ export function DrOctTab() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Left Column - Upload and Analysis */}
       <div className="space-y-6">
+        {/* Upload Section */}
         <div className="medical-card p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Upload OCT Image
+            Upload Fundus Image
           </h3>
           <FileUpload
             onFileSelect={handleFileSelect}
@@ -91,16 +92,16 @@ export function DrOctTab() {
             currentFile={selectedFile}
             loading={loading}
           />
-          
+
           {uploadProgress && (
             <div className="mt-4">
               <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
-                <span>Analyzing DR presence...</span>
+                <span>Analyzing AMD presence...</span>
                 <span>{Math.round(uploadProgress.percentage)}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div 
-                  className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress.percentage}%` }}
                 />
               </div>
@@ -112,16 +113,16 @@ export function DrOctTab() {
               onClick={handleAnalyze}
               className="w-full mt-4 medical-button py-3 rounded-md flex items-center justify-center space-x-2"
             >
-              <Zap className="h-5 w-5" />
-              <span>Analyze DR Presence</span>
+              <Activity className="h-5 w-5" />
+              <span>Analyze AMD Presence</span>
             </button>
           )}
 
           {loading && (
             <div className="mt-4">
-              <LoadingSpinner 
-                size="md" 
-                text="Analyzing DR Presence... This may take a few moments"
+              <LoadingSpinner
+                size="md"
+                text="Analyzing AMD Presence... This may take a few moments"
                 className="py-8"
               />
             </div>
@@ -137,26 +138,26 @@ export function DrOctTab() {
         {/* Information Card */}
         <div className="medical-card p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            About DR OCT Analysis
+            About AMD Fundus Analysis
           </h3>
           <div className="space-y-3 text-gray-600 dark:text-gray-300">
             <p>
-              Our AI model analyzes OCT images to detect diabetic retinopathy
-              using advanced deep learning techniques.
+              Our AI model analyzes fundus images to detect Age-related Macular Degeneration
+              using advanced deep learning techniques with binary classification.
             </p>
             <div className="grid grid-cols-1 gap-2">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm">No DR - Healthy retina</span>
+                <span className="text-sm">No AMD - Healthy retina</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm">DR signs - Pathology present</span>
+                <span className="text-sm">AMD Present - Degenerative changes detected</span>
               </div>
             </div>
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mt-4">
               <p className="text-yellow-800 dark:text-yellow-200 text-sm">
-                <strong>Medical Note:</strong> These predictions are for screening purposes 
+                <strong>Medical Note:</strong> These predictions are for screening purposes
                 and should be confirmed by clinical examination.
               </p>
             </div>
@@ -174,7 +175,7 @@ export function DrOctTab() {
                 className="w-full"
               />
             </div>
-            
+
             {/* Additional details card */}
             <div className="medical-card p-4">
               <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
@@ -203,9 +204,9 @@ export function DrOctTab() {
           imageFile={selectedFile}
           prediction={prediction}
           metadata={metadata}
-          analysisType="Glaucoma"
+          analysisType="AMD"
           severityChartRef={severityChartRef}
-        />  
+        />
 
         {metadata && (
           <MetadataCard metadata={metadata.metadata} />
@@ -213,7 +214,7 @@ export function DrOctTab() {
 
         {!prediction && !metadata && (
           <div className="medical-card p-8 text-center">
-            <Eye className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <FileImage className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               No Analysis Yet
             </h3>
