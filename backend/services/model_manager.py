@@ -60,7 +60,7 @@ class ModelManager:
         """Get or load DR model."""
         model_key = 'dr'
         if model_key not in self.loaded_models:
-            model_path = os.path.join(self.models_dir, 'model_fold1_acc0.8734.pth')
+            model_path = os.path.join(self.models_dir, 'model_fold9_acc0.8290.pth')
             self.loaded_models[model_key] = DRFundusModel(model_path, self.device)
             self.loaded_models[model_key].load_model()
         return self.loaded_models[model_key]
