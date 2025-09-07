@@ -528,7 +528,7 @@ class GlaucomaOCTModel(BaseModel):
         """Predict glaucoma from OCT image."""
 
         THRESHOLD = 0.92  # your chosen threshold
-        from monai.transforms import Compose, EnsureChannelFirst, Resize, ScaleIntensity, EnsureType
+        from monai.transforms import Compose, ScaleIntensity
 
         try:
             if not self.is_loaded:
@@ -549,12 +549,39 @@ class GlaucomaOCTModel(BaseModel):
 
                 # Convert to binary prediction
                 pred = int(prob >= THRESHOLD)
-                confidence = prob if pred == 1 else (1 - prob)
+                
+                # Improved confidence calculation based on distance from threshold
+                if pred == 1:  # Glaucoma Suspected
+                    confidence = (prob - THRESHOLD) / (1.0 - THRESHOLD)  # How much above threshold (0-1)
+                else:  # No Glaucoma
+                    confidence = (THRESHOLD - prob) / THRESHOLD  # How much below threshold (0-1)
+
+                # Determine risk category
+                if prob < 0.5:
+                    risk_category = "Low Risk"
+                    risk_color = "green"
+                elif prob < THRESHOLD:
+                    risk_category = "Moderate Risk"
+                    risk_color = "yellow"
+                else:
+                    risk_category = "High Risk"
+                    risk_color = "red"
+
+                # Create detailed explanation
+                if prob >= THRESHOLD:
+                    explanation = f"Probability ({prob:.3f}) exceeds detection threshold ({THRESHOLD}). Glaucoma suspected."
+                else:
+                    explanation = f"Probability ({prob:.3f}) is below detection threshold ({THRESHOLD}). No glaucoma detected."
 
                 return {
                     'prediction': self.classes[pred],
                     'confidence': float(confidence),
                     'probability': float(prob),
+                    'threshold': THRESHOLD,
+                    'risk_category': risk_category,
+                    'risk_color': risk_color,
+                    'threshold_explanation': explanation,
+                    'clinical_note': "Even with moderate/high risk, clinical examination is recommended for definitive diagnosis.",
                     'class_probabilities': {
                         'No Glaucoma': float(1 - prob),
                         'Glaucoma Suspected': float(prob)
@@ -576,13 +603,23 @@ class GlaucomaOCTModel(BaseModel):
     
     def _dummy_prediction(self) -> Dict[str, Any]:
         """Return dummy prediction for error cases."""
+        THRESHOLD = 0.92
+        prob = 0.5
+        pred = int(prob >= THRESHOLD)
+        confidence = (THRESHOLD - prob) / THRESHOLD  # Distance from threshold
+        
         return {
-            'prediction': 'Healthy',
-            'confidence': 0.5,
-            'probability': 0.5,
+            'prediction': self.classes[pred],
+            'confidence': float(confidence),
+            'probability': float(prob),
+            'threshold': THRESHOLD,
+            'risk_category': "Low Risk",
+            'risk_color': "green",
+            'threshold_explanation': ".3f",
+            'clinical_note': "Even with moderate/high risk, clinical examination is recommended for definitive diagnosis.",
             'class_probabilities': {
-                'Healthy': 0.5,
-                'Glaucoma': 0.5
+                'No Glaucoma': float(1 - prob),
+                'Glaucoma Suspected': float(prob)
             },
             'classes': self.classes
         }

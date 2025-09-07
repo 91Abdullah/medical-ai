@@ -7,7 +7,12 @@ interface SeverityChartProps {
         prediction: string
         confidence: number
         classes?: string[]
-        class_probabilities?: Record<string, number> // e.g. {'No Pathology Detected': 0.1525, ...}
+        class_probabilities?: Record<string, number>
+        threshold?: number
+        risk_category?: string
+        risk_color?: string
+        threshold_explanation?: string
+        clinical_note?: string
     }
     className?: string
 }
@@ -46,6 +51,39 @@ export function SeverityChart({ prediction, className = '' }: SeverityChartProps
 
     return (
         <div className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 ${className}`}>
+            {/* Header with Risk Category */}
+            <div className="mb-4">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Analysis Results
+                    </h3>
+                    {prediction.risk_category && (
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            prediction.risk_color === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' :
+                            prediction.risk_color === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                        }`}>
+                            {prediction.risk_category}
+                        </div>
+                    )}
+                </div>
+                
+                {/* Threshold Information */}
+                {prediction.threshold && (
+                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center space-x-2">
+                            <div className="text-blue-600 dark:text-blue-400 font-medium text-sm">
+                                Detection Threshold: {prediction.threshold}
+                            </div>
+                        </div>
+                        {prediction.threshold_explanation && (
+                            <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                                {prediction.threshold_explanation}
+                            </p>
+                        )}
+                    </div>
+                )}
+            </div>
 
             <div className="space-y-3">
                 {rows.map((r, idx) => (
@@ -65,6 +103,15 @@ export function SeverityChart({ prediction, className = '' }: SeverityChartProps
                                 }}
                                 aria-label={`${r.label} ${r.pct.toFixed(2)} percent`}
                             />
+                            
+                            {/* Threshold indicator line */}
+                            {prediction.threshold && r.label.toLowerCase().includes('glaucoma') && (
+                                <div
+                                    className="absolute top-0 bottom-0 w-0.5 bg-white border-l-2 border-dashed border-white"
+                                    style={{ left: `${prediction.threshold * 100}%` }}
+                                    title={`Threshold: ${prediction.threshold}`}
+                                />
+                            )}
                         </div>
 
                         {/* Right percentage - colored */}
@@ -77,6 +124,15 @@ export function SeverityChart({ prediction, className = '' }: SeverityChartProps
                     </div>
                 ))}
             </div>
+
+            {/* Clinical Note */}
+            {prediction.clinical_note && (
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                    <p className="text-yellow-800 dark:text-yellow-200 text-sm">
+                        <strong>Clinical Note:</strong> {prediction.clinical_note}
+                    </p>
+                </div>
+            )}
         </div>
     )
 }

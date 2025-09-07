@@ -273,6 +273,34 @@ export function PredictionCard({
             </div>
           </div>
 
+          {/* Risk Category for Glaucoma */}
+          {predictionData?.risk_category && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Risk Category
+              </label>
+              <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
+                predictionData.risk_color === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' :
+                predictionData.risk_color === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+              }`}>
+                <span>{predictionData.risk_category}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Threshold Information for Glaucoma */}
+          {predictionData?.threshold && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Detection Threshold
+              </label>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {predictionData.threshold} ({(predictionData.threshold * 100).toFixed(1)}%)
+              </div>
+            </div>
+          )}
+
           {/* Normal Range for Biomarkers */}
           {normalRange && variant === 'biomarker' && (
             <div>
@@ -295,6 +323,27 @@ export function PredictionCard({
               <span>{(confidence * 100).toFixed(1)}%</span>
             </div>
           </div>
+
+          {/* Threshold Explanation */}
+          {predictionData?.threshold_explanation && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Analysis Details
+              </label>
+              <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                {predictionData.threshold_explanation}
+              </div>
+            </div>
+          )}
+
+          {/* Clinical Note */}
+          {predictionData?.clinical_note && (
+            <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+              <p className="text-yellow-800 dark:text-yellow-200 text-sm">
+                <strong>Clinical Note:</strong> {predictionData.clinical_note}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Metadata */}

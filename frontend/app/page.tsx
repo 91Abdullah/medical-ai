@@ -55,7 +55,7 @@ export default function HomePage() {
       icon: <Brain className="h-12 w-12" />,
       href: '/glaucoma',
       color: 'bg-green-500',
-      models: ['Fundus Classifier']
+      models: ['OCT Classifier', 'Fundus Classifier']
     },
     {
       id: 'dr',
@@ -64,7 +64,7 @@ export default function HomePage() {
       icon: <Heart className="h-12 w-12" />,
       href: '/dr',
       color: 'bg-red-500',
-      models: ['DR Grading Model']
+      models: ['OCT Grading Model', 'Fundus Grading Model']
     },
     {
       id: 'biomarkers',

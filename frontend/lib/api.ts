@@ -6,6 +6,12 @@ export interface PredictionResult {
   processing_time: number
   classes?: string[] // Dynamic classes from model
   class_probabilities?: Record<string, number> // Probabilities for each class
+  threshold?: number // Detection threshold used by model
+  risk_category?: string // Risk category (Low/Medium/High)
+  risk_color?: string // Color for risk category display
+  threshold_explanation?: string // Explanation of threshold logic
+  clinical_note?: string // Clinical guidance note
+  probability?: number // Raw probability from model
 }
 
 export interface BiomarkerResult {
