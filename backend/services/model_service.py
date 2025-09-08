@@ -583,8 +583,8 @@ class GlaucomaOCTModel(BaseModel):
                     'threshold_explanation': explanation,
                     'clinical_note': "Even with moderate/high risk, clinical examination is recommended for definitive diagnosis.",
                     'class_probabilities': {
-                        'No Glaucoma': float(1 - prob),
-                        'Glaucoma Suspected': float(prob)
+                        'No Glaucoma': float(prob),
+                        'Glaucoma Suspected': float(1 - prob)
                     },
                     'classes': self.classes
                 }

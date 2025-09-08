@@ -290,7 +290,7 @@ export function PredictionCard({
           )}
 
           {/* Threshold Information for Glaucoma */}
-          {predictionData?.threshold && (
+          {/* {predictionData?.threshold && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Detection Threshold
@@ -299,7 +299,7 @@ export function PredictionCard({
                 {predictionData.threshold} ({(predictionData.threshold * 100).toFixed(1)}%)
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Normal Range for Biomarkers */}
           {normalRange && variant === 'biomarker' && (

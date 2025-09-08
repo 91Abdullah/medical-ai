@@ -57,7 +57,7 @@ export function SeverityChart({ prediction, className = '' }: SeverityChartProps
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                         Analysis Results
                     </h3>
-                    {prediction.risk_category && (
+                    {/* {prediction.risk_category && (
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                             prediction.risk_color === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' :
                             prediction.risk_color === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
@@ -65,11 +65,11 @@ export function SeverityChart({ prediction, className = '' }: SeverityChartProps
                         }`}>
                             {prediction.risk_category}
                         </div>
-                    )}
+                    )} */}
                 </div>
                 
                 {/* Threshold Information */}
-                {prediction.threshold && (
+                {/* {prediction.threshold && (
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
                         <div className="flex items-center space-x-2">
                             <div className="text-blue-600 dark:text-blue-400 font-medium text-sm">
@@ -82,7 +82,7 @@ export function SeverityChart({ prediction, className = '' }: SeverityChartProps
                             </p>
                         )}
                     </div>
-                )}
+                )} */}
             </div>
 
             <div className="space-y-3">
@@ -126,13 +126,13 @@ export function SeverityChart({ prediction, className = '' }: SeverityChartProps
             </div>
 
             {/* Clinical Note */}
-            {prediction.clinical_note && (
+            {/* {prediction.clinical_note && (
                 <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                     <p className="text-yellow-800 dark:text-yellow-200 text-sm">
                         <strong>Clinical Note:</strong> {prediction.clinical_note}
                     </p>
                 </div>
-            )}
+            )} */}
         </div>
     )
 }

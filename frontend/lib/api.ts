@@ -70,7 +70,7 @@ export type ImageType = 'oct' | 'fundus'
 
 // Biomarker names
 export const BIOMARKERS = [
-  'Age',
+  // 'Age',
   'BMI',
   // 'BP_OUT_CALC_AVG_DIASTOLIC_BP',
   // 'BP_OUT_CALC_AVG_SYSTOLIC_BP',
@@ -80,7 +80,7 @@ export const BIOMARKERS = [
   'Glucose',
   'HbA1C %',
   'HDL-Cholesterol',
-  'Hematocrit',
+  // 'Hematocrit',
   'Hemoglobin',
   'Insulin',
   'LDL-Cholesterol Calc',

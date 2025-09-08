@@ -247,7 +247,7 @@ export function ImagePreviewCard({
         </div>
 
         {/* Analysis Summary */}
-        {(prediction || biomarkers) && (
+        {/* {(prediction || biomarkers) && (
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
               Analysis Summary
@@ -279,7 +279,7 @@ export function ImagePreviewCard({
               )}
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   )
