@@ -69,11 +69,11 @@ export default function HomePage() {
     {
       id: 'biomarkers',
       name: 'Biomarker Analysis',
-      description: 'Predict 13 different biomarkers from retinal fundus images',
+      description: 'Predict 11 different biomarkers from retinal fundus images',
       icon: <Activity className="h-12 w-12" />,
       href: '/biomarkers',
       color: 'bg-purple-500',
-      models: ['13 Biomarker Models']
+      models: ['11 Biomarker Models']
     }
   ]
 

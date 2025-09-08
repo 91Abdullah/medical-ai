@@ -284,7 +284,7 @@ export default function BiomarkersPage() {
           </h1>
         </div>
         <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-          Predict up to 12 different biomarkers from retinal fundus images using advanced AI models
+          Predict up to 11 different biomarkers from retinal fundus images using advanced AI models
         </p>
       </div>
 
