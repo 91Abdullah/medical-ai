@@ -118,14 +118,17 @@ function createPDFHTML(data: ReportData): string {
         </div>
       ` : ''}
 
-      <!-- Analyzed Image -->
+      <!-- Enhanced Analyzed Image Preview -->
+      ${data.image ? `
+              <!-- Analyzed Image -->
       ${data.image ? `
         <div style="margin-bottom: 32px;">
           <h3 style="color: #1e40af; font-size: 16px; font-weight: 600; margin: 0 0 16px 0;">Analyzed Image</h3>
-          <div style="background: #f8fafc; border-radius: 12px; padding: 16px; text-align: center;">
-            <img src="${data.image}" style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+          <div style="text-align: center;">
+            <img src="${data.image}" style="max-width: 100%; max-height: 300px;" />
           </div>
         </div>
+      ` : ''}
       ` : ''}
 
       <!-- Prediction Results (only if no chart) -->
@@ -225,6 +228,21 @@ function generateFilename(data: ReportData): string {
   return `${data.analysisType.toLowerCase()}_report_${timestamp}.pdf`
 }
 
+// Helper function to get status color for table
+function getStatusColor(status: string): { r: number; g: number; b: number } {
+  const statusLower = status.toLowerCase()
+
+  if (statusLower.includes('normal') || statusLower.includes('optimal')) {
+    return { r: 34, g: 197, b: 94 } // Green
+  } else if (statusLower.includes('borderline') || statusLower.includes('elevated') || statusLower.includes('near')) {
+    return { r: 245, g: 158, b: 11 } // Yellow/Orange
+  } else if (statusLower.includes('high') || statusLower.includes('low') || statusLower.includes('stage')) {
+    return { r: 239, g: 68, b: 68 } // Red
+  }
+
+  return { r: 107, g: 114, b: 128 } // Gray for unknown
+}
+
 // Utility function to convert chart component to base64 image
 export function chartToBase64(chartElement: HTMLElement): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -232,7 +250,7 @@ export function chartToBase64(chartElement: HTMLElement): Promise<string> {
       // Set a maximum width for the chart before capturing
       const maxWidth = 700; // Leave some margin for PDF
       const originalWidth = chartElement.style.width;
-      
+
       // Temporarily set width if needed
       if (chartElement.offsetWidth > maxWidth) {
         chartElement.style.width = `${maxWidth}px`;
@@ -252,7 +270,7 @@ export function chartToBase64(chartElement: HTMLElement): Promise<string> {
         if (originalWidth) {
           chartElement.style.width = originalWidth;
         }
-        
+
         const base64Image = canvas.toDataURL('image/png', 1.0)
         resolve(base64Image)
       }).catch((error: any) => {
@@ -354,6 +372,30 @@ export async function generateBiomarkerPDFReport(data: ReportData): Promise<void
       yPosition += 0.25
     }
 
+    // Add analyzed image if available
+    if (data.image) {
+      pdf.setFontSize(12)
+      pdf.setTextColor(30, 64, 175)
+      pdf.text('Analyzed Image:', margin, yPosition)
+      yPosition += 0.2
+
+      try {
+        // Add image centered on the page
+        const imageWidth = 3.0 // 3 inches width
+        const imageHeight = 2.25 // 2.25 inches height
+        const imageX = margin + (contentWidth - imageWidth) / 2
+
+        pdf.addImage(data.image, 'JPEG', imageX, yPosition, imageWidth, imageHeight)
+        yPosition += imageHeight + 0.3
+      } catch (error) {
+        console.error('Failed to add image to PDF:', error)
+        pdf.setFontSize(10)
+        pdf.setTextColor(239, 68, 68) // Red color for error
+        pdf.text('Error: Could not load analyzed image', margin, yPosition)
+        yPosition += 0.3
+      }
+    }
+
     // Add charts section header
     pdf.setFontSize(14)
     pdf.setTextColor(30, 64, 175)
@@ -407,40 +449,114 @@ export async function generateBiomarkerPDFReport(data: ReportData): Promise<void
       }
     }
 
-    // Add biomarker values table if space allows
-    if (data.biomarkers && data.biomarkers.length > 0 && yPosition < pageHeight - 1.5) {
-      yPosition += 0.3
-      pdf.setFontSize(14)
-      pdf.setTextColor(30, 64, 175)
-      pdf.text('Biomarker Values:', margin, yPosition)
-      yPosition += 0.25
+    // Add biomarker values table with enhanced styling
+    // if (data.biomarkers && data.biomarkers.length > 0 && yPosition < pageHeight - 2.0) {
+    //   yPosition += 0.4
+    //   pdf.setFontSize(14)
+    //   pdf.setTextColor(30, 64, 175)
+    //   pdf.text('Biomarker Summary Table:', margin, yPosition)
+    //   yPosition += 0.3
 
-      // Add table headers
-      pdf.setFontSize(10)
-      pdf.setTextColor(0, 0, 0)
-      pdf.text('Biomarker', margin, yPosition)
-      pdf.text('Value', margin + 2.5, yPosition)
-      pdf.text('Status', margin + 4.0, yPosition)
-      yPosition += 0.1
-      
-      // Draw line under headers
-      pdf.setDrawColor(200, 200, 200)
-      pdf.line(margin, yPosition, pageWidth - margin, yPosition)
-      yPosition += 0.1
+    //   // Table configuration
+    //   const tableStartY = yPosition
+    //   const rowHeight = 0.2
+    //   const colWidths = [2.8, 1.2, 1.8, 1.2] // Biomarker, Value, Unit, Status
+    //   const tableWidth = colWidths.reduce((a, b) => a + b, 0)
 
-      // Add biomarker data
-      for (const biomarker of data.biomarkers) {
-        if (yPosition > pageHeight - 0.2) {
-          pdf.addPage()
-          yPosition = margin
-        }
-        
-        pdf.text(biomarker.biomarker_name, margin, yPosition)
-        pdf.text(biomarker.predicted_value.toString(), margin + 2.5, yPosition)
-        pdf.text(biomarker.normal_range || 'N/A', margin + 4.0, yPosition)
-        yPosition += 0.15
-      }
-    }
+    //   // Draw table header background
+    //   pdf.setFillColor(248, 250, 252) // Light gray background
+    //   pdf.rect(margin, yPosition - 0.05, tableWidth, rowHeight + 0.1, 'F')
+
+    //   // Table headers with better styling
+    //   pdf.setFontSize(10)
+    //   pdf.setTextColor(30, 64, 175) // Blue headers
+    //   pdf.setFont('helvetica', 'bold')
+    //   pdf.text('Biomarker', margin + 0.1, yPosition + 0.12)
+    //   pdf.text('Value', margin + colWidths[0] + 0.1, yPosition + 0.12)
+    //   pdf.text('Unit', margin + colWidths[0] + colWidths[1] + 0.1, yPosition + 0.12)
+    //   pdf.text('Status', margin + colWidths[0] + colWidths[1] + colWidths[2] + 0.1, yPosition + 0.12)
+
+    //   // Draw header bottom border
+    //   pdf.setDrawColor(59, 130, 246) // Blue border
+    //   pdf.setLineWidth(0.01)
+    //   pdf.line(margin, yPosition + rowHeight, margin + tableWidth, yPosition + rowHeight)
+
+    //   yPosition += rowHeight + 0.05
+
+    //   // Add biomarker data rows
+    //   pdf.setFont('helvetica', 'normal')
+    //   pdf.setTextColor(0, 0, 0)
+
+    //   for (let i = 0; i < data.biomarkers.length; i++) {
+    //     const biomarker = data.biomarkers[i]
+
+    //     // Check if we need a new page
+    //     if (yPosition + rowHeight > pageHeight - margin) {
+    //       pdf.addPage()
+    //       yPosition = margin
+
+    //       // Re-add table header on new page
+    //       pdf.setFillColor(248, 250, 252)
+    //       pdf.rect(margin, yPosition - 0.05, tableWidth, rowHeight + 0.1, 'F')
+
+    //       pdf.setFontSize(10)
+    //       pdf.setTextColor(30, 64, 175)
+    //       pdf.setFont('helvetica', 'bold')
+    //       pdf.text('Biomarker (continued)', margin + 0.1, yPosition + 0.12)
+    //       pdf.text('Value', margin + colWidths[0] + 0.1, yPosition + 0.12)
+    //       pdf.text('Unit', margin + colWidths[0] + colWidths[1] + 0.1, yPosition + 0.12)
+    //       pdf.text('Status', margin + colWidths[0] + colWidths[1] + colWidths[2] + 0.1, yPosition + 0.12)
+
+    //       pdf.setDrawColor(59, 130, 246)
+    //       pdf.line(margin, yPosition + rowHeight, margin + tableWidth, yPosition + rowHeight)
+
+    //       yPosition += rowHeight + 0.05
+    //       pdf.setFont('helvetica', 'normal')
+    //       pdf.setTextColor(0, 0, 0)
+    //     }
+
+    //     // Alternate row background
+    //     if (i % 2 === 1) {
+    //       pdf.setFillColor(249, 250, 251) // Very light gray for alternating rows
+    //       pdf.rect(margin, yPosition - 0.02, tableWidth, rowHeight + 0.04, 'F')
+    //     }
+
+    //     // Draw row content
+    //     pdf.setFontSize(9)
+
+    //     // Biomarker name (truncate if too long)
+    //     const biomarkerName = biomarker.biomarker_name.length > 25 ?
+    //       biomarker.biomarker_name.substring(0, 22) + '...' : biomarker.biomarker_name
+    //     pdf.text(biomarkerName, margin + 0.1, yPosition + 0.12)
+
+    //     // Value (right-aligned)
+    //     const valueStr = biomarker.predicted_value.toFixed(2)
+    //     const valueX = margin + colWidths[0] + colWidths[1] - pdf.getTextWidth(valueStr) - 0.1
+    //     pdf.text(valueStr, valueX, yPosition + 0.12)
+
+    //     // Unit
+    //     pdf.text(biomarker.unit || 'N/A', margin + colWidths[0] + colWidths[1] + 0.1, yPosition + 0.12)
+
+    //     // Status with color coding
+    //     const status = biomarker.normal_range || 'Unknown'
+    //     const statusColor = getStatusColor(status)
+    //     pdf.setTextColor(statusColor.r, statusColor.g, statusColor.b)
+    //     pdf.text(status, margin + colWidths[0] + colWidths[1] + colWidths[2] + 0.1, yPosition + 0.12)
+    //     pdf.setTextColor(0, 0, 0) // Reset to black
+
+    //     // Draw row bottom border
+    //     pdf.setDrawColor(229, 231, 235) // Light gray border
+    //     pdf.setLineWidth(0.005)
+    //     pdf.line(margin, yPosition + rowHeight, margin + tableWidth, yPosition + rowHeight)
+
+    //     yPosition += rowHeight
+    //   }
+
+    //   // Draw outer table border
+    //   pdf.setDrawColor(59, 130, 246)
+    //   pdf.setLineWidth(0.01)
+    //   pdf.rect(margin, tableStartY - 0.05, tableWidth, yPosition - tableStartY + 0.05)
+    // }
 
     // Add standard disclaimer (same as other reports)
     if (yPosition > pageHeight - 1.0) {
